@@ -1,0 +1,30 @@
+# Environment & Secrets (NEVER PUSH TO GITHUB)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Python & Virtual Environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node & Frontend
+node_modules/
+dist/
+.vite/
+
+# Temporary / OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.tempmediaStorage/
+extracted_logos/
+
+# Submission ZIP Archive (keep local)
+cv-parting-project-submission.zip
