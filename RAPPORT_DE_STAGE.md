@@ -24,7 +24,7 @@ Filière           : Diplôme Universitaire de Technologie (DUT)
 Entreprise d'Accueil: KINOVATECH — Dépt. IA & Direction IT
 Modalité du Stage : À Distance / Remote (Télétravail)
 Encadrant Entreprise: Responsable Dépt. IA (KINOVATECH)
-Encadrant Pédagogique: Professeur Encadrant (EST Meknès)
+Encadrant Pédagogique: Prof. A. ABOULFARAJ (EST Meknès)
 Année Universitaire: 2025 / 2026
 ================================================================================
 ```
@@ -50,7 +50,7 @@ Année Universitaire: 2025 / 2026
 
 Avant d'entamer la description détaillée des travaux réalisés durant mon stage mené à distance, il m'est particulièrement agréable d'adresser mes remerciements les plus sincères à Monsieur le Directeur de l'**École Supérieure de Technologie de Meknès (ESTM - UMI)** ainsi qu'à l'ensemble du corps professoral du département **Génie Informatique** pour la qualité de l'enseignement dispensé tout au long de mon cursus universitaire.
 
-Je tiens à exprimer ma profonde gratitude à mon encadrant pédagogique de l'EST Meknès, pour son soutien précieux, ses conseils méthodologiques éclairés et sa grande disponibilité lors de nos échanges à distance.
+Je tiens à exprimer ma profonde gratitude à mon encadrant pédagogique de l'EST Meknès, **Monsieur le Professeur A. ABOULFARAJ**, pour son soutien précieux, ses conseils méthodologiques éclairés, sa rigueur et sa grande disponibilité lors de nos échanges à distance.
 
 Mes remerciements les plus chaleureux vont également à l'entreprise d'accueil **KINOVATECH**, et tout particulièrement au **Responsable du Département IA**, pour m'avoir accueilli au sein de ses équipes techniques en modalité à distance (télétravail), pour la confiance accordée lors des points quotidiens et pour la qualité du sujet proposé.
 
@@ -62,7 +62,7 @@ Enfin, j'adresse mes remerciements à toutes les personnes qui ont contribué de
 
 Dans le cadre du diplôme préparé à l'**École Supérieure de Technologie de Meknès (Université Moulay Ismaïl)** en **Génie Informatique**, les étudiants sont amenés à effectuer un stage professionnel afin de confronter leurs connaissances théoriques aux exigences concrètes du marché de l'ingénierie informatique.
 
-Mon stage s'est déroulé au sein de la société **KINOVATECH** en modalité **À Distance (Remote / Télétravail)**. Cette organisation s'est appuyée sur des méthodes agiles collaboratives à distance : points de suivi quotidiens (Daily Standup), revues de code asynchrones sur Git/GitHub, communication continue via messagerie professionnelle et outils de visio-conférence.
+Mon stage s'est déroulé au sein de la société **KINOVATECH** en modalité **À Distance (Remote / Télétravail)** sous l'encadrement pédagogique de **Prof. A. ABOULFARAJ**. Cette organisation s'est appuyée sur des méthodes agiles collaboratives à distance : points de suivi quotidiens (Daily Standup), revues de code asynchrones sur Git/GitHub, communication continue via messagerie professionnelle et outils de visio-conférence.
 
 Le présent rapport décrit la conception, l'architecture technique retenue (Moteur Hybride 3-Layer : Regex déterministe, spaCy NER, Enrichment LLM) et la mise en œuvre pratique de cette application de parsing intelligent de CVs conforme aux contraintes de la **Loi marocaine n° 09-08 (CNDP)**.
 
@@ -77,6 +77,7 @@ L'**École Supérieure de Technologie de Meknès (ESTM)**, rattachée à l'**Uni
 **KINOVATECH** est une entreprise technologique spécialisée dans le développement de solutions logicielles d'intelligence artificielle, d'automatisation des processus RH et de transformation digitale.
 - **Département d'Accueil** : Département IA & Direction IT - KINOVATECH
 - **Modalité du Stage** : Stage à Distance / Remote (Télétravail)
+- **Encadrant Pédagogique** : Prof. A. ABOULFARAJ (EST Meknès)
 - **Rédacteur du Cahier de Spécifications** : Responsable Dépt. IA - KINOVATECH
 - **Objectif du Projet** : Automatiser l'extraction et l'analyse des candidatures RH (PDF, DOCX, ZIP) pour les cabinets de recrutement, avec anonymisation stricte PII (Loi 09-08).
 
@@ -159,7 +160,7 @@ L'environnement de développement et d'expérimentation comprend :
 ## 9. CONCLUSION & PERSPECTIVES
 
 ### Conclusion :
-Ce stage à distance au sein de **KINOVATECH** constitue une expérience professionnelle majeure. Il m'a permis d'allier les connaissances théoriques acquises à l'**EST Meknès (Université Moulay Ismaïl)** dans la filière **Génie Informatique** à la réalisation pratique d'un projet d'ingénierie logicielle complet.
+Ce stage à distance au sein de **KINOVATECH** sous la supervision de **Prof. A. ABOULFARAJ** constitue une expérience professionnelle majeure. Il m'a permis d'allier les connaissances théoriques acquises à l'**EST Meknès (Université Moulay Ismaïl)** dans la filière **Génie Informatique** à la réalisation pratique d'un projet d'ingénierie logicielle complet.
 
 Le moteur **KINOVATECH CV Parser** livre des performances élevées (temps de traitement < 0.5s par CV), garantit la conformité avec la Loi 09-08 CNDP, et propose une interface utilisateur réactive.
 
@@ -180,6 +181,7 @@ Le moteur **KINOVATECH CV Parser** livre des performances élevées (temps de tr
 Titre   : Application de Parsing Intelligent de CVs, Anonymisation PII & Dashboard
 Élève   : YOUSSEF TAICHA
 Filière : Génie Informatique — EST Meknès (Université Moulay Ismaïl)
+Encadrant: Prof. A. ABOULFARAJ (EST Meknès)
 Entreprise: KINOVATECH — Dépt. IA & Direction IT
 Modalité: Stage à Distance / Remote (Télétravail)
 
@@ -193,7 +195,8 @@ une suite de 43 tests Pytest (100% de réussite) ainsi qu'un dossier de conformi
 stricte avec la Loi marocaine n° 09-08 (CNDP).
 
 MOTS-CLÉS :
-Parsing CV, Stage à Distance, Remote, Youssef Taicha, Génie Informatique, EST Meknès, 
-UMI, KINOVATECH, NLP, spaCy, FastAPI, React.js, Anonymisation PII, CNDP Loi 09-08.
+Parsing CV, Stage à Distance, Remote, Youssef Taicha, Prof. A. ABOULFARAJ, Génie 
+Informatique, EST Meknès, UMI, KINOVATECH, NLP, spaCy, FastAPI, React.js, 
+Anonymisation PII, CNDP Loi 09-08.
 ================================================================================
 ```
