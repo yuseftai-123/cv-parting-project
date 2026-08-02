@@ -21,9 +21,9 @@ Réalisé par       : YOUSSEF TAICHA
 Filière           : Diplôme Universitaire de Technologie (DUT)
                     Génie Informatique
 Établissement     : EST Meknès — Université Moulay Ismaïl
-Entreprise d'Accueil: KINOVATECH — Dépt. IA & Direction IT
+Entreprise d'Accueil: Kinova Tech (https://kinovatech.com) — Dépt. IA & IT
 Modalité du Stage : À Distance / Remote (Télétravail)
-Encadrant Entreprise: Responsable Dépt. IA (KINOVATECH)
+Encadrant Entreprise: Responsable Dépt. IA (Kinova Tech)
 Encadrant Pédagogique: Prof. A. ABOULFARAJ (EST Meknès)
 Année Universitaire: 2025 / 2026
 ================================================================================
@@ -35,7 +35,7 @@ Année Universitaire: 2025 / 2026
 
 1. **Remerciements**
 2. **Introduction Générale & Organisation à Distance**
-3. **Présentation de l'Établissement (EST Meknès - UMI) & de l'Entreprise d'Accueil (KINOVATECH)**
+3. **Présentation de l'Établissement (EST Meknès - UMI) & Fiche Signalétique Kinova Tech (https://kinovatech.com)**
 4. **Organigramme & Structure du Projet à Distance**
 5. **Problématique & Définition du Moteur de Parsing CV (Architecture 3-Layer)**
 6. **Matériel & Environnement de Travail à Distance**
@@ -52,7 +52,7 @@ Avant d'entamer la description détaillée des travaux réalisés durant mon sta
 
 Je tiens à exprimer ma profonde gratitude à mon encadrant pédagogique de l'EST Meknès, **Monsieur le Professeur A. ABOULFARAJ**, pour son soutien précieux, ses conseils méthodologiques éclairés, sa rigueur et sa grande disponibilité lors de nos échanges à distance.
 
-Mes remerciements les plus chaleureux vont également à l'entreprise d'accueil **KINOVATECH**, et tout particulièrement au **Responsable du Département IA**, pour m'avoir accueilli au sein de ses équipes techniques en modalité à distance (télétravail), pour la confiance accordée lors des points quotidiens et pour la qualité du sujet proposé.
+Mes remerciements les plus chaleureux vont également à l'entreprise d'accueil **Kinova Tech** (`https://kinovatech.com`), et tout particulièrement au **Responsable du Département IA**, pour m'avoir accueilli au sein de ses équipes techniques en modalité à distance (télétravail), pour la confiance accordée lors des points quotidiens et pour la qualité du sujet proposé.
 
 Enfin, j'adresse mes remerciements à toutes les personnes qui ont contribué de près ou de loin à la réussite de ce travail d'ingénierie logicielle.
 
@@ -62,7 +62,7 @@ Enfin, j'adresse mes remerciements à toutes les personnes qui ont contribué de
 
 Dans le cadre du diplôme préparé à l'**École Supérieure de Technologie de Meknès (Université Moulay Ismaïl)** en **Génie Informatique**, les étudiants sont amenés à effectuer un stage professionnel afin de confronter leurs connaissances théoriques aux exigences concrètes du marché de l'ingénierie informatique.
 
-Mon stage s'est déroulé au sein de la société **KINOVATECH** en modalité **À Distance (Remote / Télétravail)** sous l'encadrement pédagogique de **Prof. A. ABOULFARAJ**. Cette organisation s'est appuyée sur des méthodes agiles collaboratives à distance : points de suivi quotidiens (Daily Standup), revues de code asynchrones sur Git/GitHub, communication continue via messagerie professionnelle et outils de visio-conférence.
+Mon stage s'est déroulé au sein de la société **Kinova Tech** en modalité **À Distance (Remote / Télétravail)** sous l'encadrement pédagogique de **Prof. A. ABOULFARAJ**. Cette organisation s'est appuyée sur des méthodes agiles collaboratives à distance : points de suivi quotidiens (Daily Standup), revues de code asynchrones sur Git/GitHub, communication continue via messagerie professionnelle et outils de visio-conférence.
 
 Le présent rapport décrit la conception, l'architecture technique retenue (Moteur Hybride 3-Layer : Regex déterministe, spaCy NER, Enrichment LLM) et la mise en œuvre pratique de cette application de parsing intelligent de CVs conforme aux contraintes de la **Loi marocaine n° 09-08 (CNDP)**.
 
@@ -73,13 +73,24 @@ Le présent rapport décrit la conception, l'architecture technique retenue (Mot
 ### 3.1 Établissement d'Origine : EST Meknès (UMI)
 L'**École Supérieure de Technologie de Meknès (ESTM)**, rattachée à l'**Université Moulay Ismaïl (UMI)** (`https://www.est.umi.ac.ma/`), est un établissement public d'enseignement supérieur d'excellence formant des techniciens supérieurs et ingénieurs d'application hautement qualifiés en **Génie Informatique**.
 
-### 3.2 Entreprise d'Accueil : KINOVATECH
-**KINOVATECH** est une entreprise technologique spécialisée dans le développement de solutions logicielles d'intelligence artificielle, d'automatisation des processus RH et de transformation digitale.
-- **Département d'Accueil** : Département IA & Direction IT - KINOVATECH
+### 3.2 Entreprise d'Accueil : Kinova Tech
+**Kinova Tech** (`https://kinovatech.com`) est une entreprise d'ingénierie logicielle et de conseil technologique spécialisée dans la transformation numérique souveraine, l'Intelligence Artificielle, la Cybersécurité et la numérisation des processus d'affaires RH.
+
+- **Raison Sociale** : Kinova Tech (KINOVATECH)
+- **Site Web Officiel** : `https://kinovatech.com`
+- **Slogan Institutionnel** : *« Accélérez votre transformation numérique en toute souveraineté »*
+- **Siège Social** : IMM 97 B, AV HASSAN SGHIR, 4ÈME ÉTAGE, N°126, Casablanca, Maroc
+- **Téléphone Contact** : +212 661-896943 / +212 648-020096
+- **Email Contact** : `contact@kinovatech.com`
+- **Domaines d'Expertise Majeurs** :
+  1. **Intelligence Artificielle & IA Générative** : Conseil, formation et développement de solutions de parsing et de machine learning pour optimiser les processus métiers.
+  2. **Cybersécurité & Gouvernance** : Audit de sécurité, protection des données stratégiques et résilience des systèmes d'information.
+  3. **Infrastructures & Réseaux Informatiques** : Conception, optimisation et sécurisation des réseaux d'entreprise.
+- **Vision Institutionnelle** : Transformer l'Intelligence Artificielle en levier de souveraineté et de performance durable, en alliant sécurité des données, gouvernance éthique et valorisation de l'expertise humaine.
 - **Modalité du Stage** : Stage à Distance / Remote (Télétravail)
 - **Encadrant Pédagogique** : Prof. A. ABOULFARAJ (EST Meknès)
-- **Rédacteur du Cahier de Spécifications** : Responsable Dépt. IA - KINOVATECH
-- **Objectif du Projet** : Automatiser l'extraction et l'analyse des candidatures RH (PDF, DOCX, ZIP) pour les cabinets de recrutement, avec anonymisation stricte PII (Loi 09-08).
+- **Rédacteur du Cahier de Spécifications** : Responsable Dépt. IA - Kinova Tech
+- **Objectif du Projet** : Automatiser l'extraction et l'analyse des candidatures RH (PDF, DOCX, ZIP) pour les cabinets de recrutement, avec anonymisation stricte PII (Loi 09-08 CNDP).
 
 ---
 
@@ -87,7 +98,7 @@ L'**École Supérieure de Technologie de Meknès (ESTM)**, rattachée à l'**Uni
 
 ```text
                ┌─────────────────────────────────────────────────┐
-               │    DIRECTION IT & DÉPT. IA — KINOVATECH         │
+               │    DIRECTION IT & DÉPT. IA — KINOVA TECH        │
                └────────────────────────┬────────────────────────┘
                                         │ (Suivi à Distance / Daily Standups)
          ┌──────────────────────────────┼──────────────────────────────┐
@@ -127,7 +138,7 @@ L'environnement de développement et d'expérimentation comprend :
 - **FastAPI** : Framework ASGI ultra-rapide pour exposer les API REST (`/upload`, `/batch`, `/search`, `/health`).
 - **spaCy (`fr_core_news_lg`)** : Modèle linguistique de traitement automatique du langage naturel (NLP).
 - **PyMuPDF (fitz) & python-docx** : Moteurs d'extraction textuelle haute fidélité pour PDF et DOCX.
-- **Pydantic v2** : Structure et validation des schemas JSON conformes à la Section 3.3 du cahier des charges KINOVATECH.
+- **Pydantic v2** : Structure et validation des schemas JSON conformes à la Section 3.3 du cahier des charges Kinova Tech.
 
 ### Frontend Dashboard :
 - **React.js & Vite** : Framework Frontend moderne offrant un temps de build optimal (1.89s).
@@ -160,7 +171,7 @@ L'environnement de développement et d'expérimentation comprend :
 ## 9. CONCLUSION & PERSPECTIVES
 
 ### Conclusion :
-Ce stage à distance au sein de **KINOVATECH** sous la supervision de **Prof. A. ABOULFARAJ** constitue une expérience professionnelle majeure. Il m'a permis d'allier les connaissances théoriques acquises à l'**EST Meknès (Université Moulay Ismaïl)** dans la filière **Génie Informatique** à la réalisation pratique d'un projet d'ingénierie logicielle complet.
+Ce stage à distance au sein de **Kinova Tech** (`https://kinovatech.com`) sous la supervision de **Prof. A. ABOULFARAJ** constitue une expérience professionnelle majeure. Il m'a permis d'allier les connaissances théoriques acquises à l'**EST Meknès (Université Moulay Ismaïl)** dans la filière **Génie Informatique** à la réalisation pratique d'un projet d'ingénierie logicielle complet.
 
 Le moteur **KINOVATECH CV Parser** livre des performances élevées (temps de traitement < 0.5s par CV), garantit la conformité avec la Loi 09-08 CNDP, et propose une interface utilisateur réactive.
 
@@ -182,7 +193,7 @@ Titre   : Application de Parsing Intelligent de CVs, Anonymisation PII & Dashboa
 Élève   : YOUSSEF TAICHA
 Filière : Génie Informatique — EST Meknès (Université Moulay Ismaïl)
 Encadrant: Prof. A. ABOULFARAJ (EST Meknès)
-Entreprise: KINOVATECH — Dépt. IA & Direction IT
+Entreprise: Kinova Tech (https://kinovatech.com) — Dépt. IA & Direction IT
 Modalité: Stage à Distance / Remote (Télétravail)
 
 RÉSUMÉ :
@@ -196,7 +207,7 @@ stricte avec la Loi marocaine n° 09-08 (CNDP).
 
 MOTS-CLÉS :
 Parsing CV, Stage à Distance, Remote, Youssef Taicha, Prof. A. ABOULFARAJ, Génie 
-Informatique, EST Meknès, UMI, KINOVATECH, NLP, spaCy, FastAPI, React.js, 
-Anonymisation PII, CNDP Loi 09-08.
+Informatique, EST Meknès, UMI, Kinova Tech, https://kinovatech.com, NLP, spaCy, 
+FastAPI, React.js, Anonymisation PII, CNDP Loi 09-08.
 ================================================================================
 ```
