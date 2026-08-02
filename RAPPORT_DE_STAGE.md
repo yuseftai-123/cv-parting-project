@@ -2,7 +2,7 @@
 
 ---
 
-## 📄 PAGE DE GARDE (COVER PAGE)
+## PAGE DE GARDE (COVER PAGE)
 
 ```text
 ================================================================================
@@ -31,7 +31,7 @@ Année Universitaire: 2025 / 2026
 
 ---
 
-## 📌 SOMMAIRE (TABLE OF CONTENTS)
+## SOMMAIRE (TABLE OF CONTENTS)
 
 1. **Remerciements**
 2. **Introduction Générale & Organisation à Distance**
@@ -182,7 +182,7 @@ Le moteur **KINOVATECH CV Parser** livre des performances élevées (temps de tr
 
 ---
 
-## 📄 QUATRIÈME DE COUVERTURE (BACK COVER)
+## QUATRIÈME DE COUVERTURE (BACK COVER)
 
 ```text
 ================================================================================

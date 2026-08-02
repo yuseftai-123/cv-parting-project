@@ -4,7 +4,7 @@
 
 ---
 
-## 🏛️ System Architecture
+## System Architecture
 
 The engine processes uploaded CVs through an **8-Stage, 3-Layer Processing Pipeline**:
 
@@ -43,7 +43,7 @@ The engine processes uploaded CVs through an **8-Stage, 3-Layer Processing Pipel
 
 ---
 
-## 📋 Prerequisites
+## Prerequisites
 
 * **Python**: `3.11.x`
 * **Node.js**: `v18.x` or higher
@@ -52,7 +52,7 @@ The engine processes uploaded CVs through an **8-Stage, 3-Layer Processing Pipel
 
 ---
 
-## 🚀 Quickstart Setup Guide
+## Quickstart Setup Guide
 
 ### 1. Run the FastAPI Backend (Port 8000)
 
@@ -90,7 +90,7 @@ docker compose up -d
 
 ---
 
-## 📡 API Reference Endpoints
+## API Reference Endpoints
 
 | Endpoint | Method | Description | Payload / Query |
 | :--- | :--- | :--- | :--- |
@@ -101,7 +101,7 @@ docker compose up -d
 
 ---
 
-## 🧪 Running the Pytest Suite
+## Running the Pytest Suite
 
 To execute all 43 automated unit and integration test cases:
 
@@ -112,6 +112,6 @@ venv\Scripts\python.exe -m pytest tests/ -v
 
 ---
 
-## 📜 Privacy & Compliance
+## Privacy & Compliance
 
 This engine operates in full compliance with the Moroccan **Loi n° 09-08** relative à la protection des personnes physiques à l'égard du traitement des données à caractère personnel (enforced by **CNDP**). Refer to [`cndp_compliance.md`](file:///c:/Users/pc/Desktop/cv-parting-project/cndp_compliance.md) and [`registre_des_traitements.md`](file:///c:/Users/pc/Desktop/cv-parting-project/registre_des_traitements.md) for official documentation.
