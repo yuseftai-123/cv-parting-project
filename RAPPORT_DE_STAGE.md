@@ -50,7 +50,7 @@ Année Universitaire: 2025 / 2026
 
 Avant d'entamer la description détaillée des travaux réalisés durant mon stage mené à distance, il m'est particulièrement agréable d'adresser mes remerciements les plus sincères à Monsieur le Directeur de l'**École Supérieure de Technologie de Meknès (ESTM - UMI)** ainsi qu'à l'ensemble du corps professoral du département **Génie Informatique** pour la qualité de l'enseignement dispensé tout au long de mon cursus universitaire.
 
-Je tiens à exprimer ma profonde gratitude à mon encadrant pédagogique de l'EST Meknès, **Monsieur le Professeur A. ABOULFARAJ**, pour son soutien précieux, ses conseils méthodologiques éclairés, sa rigueur et sa grande disponibilité lors de nos échanges à distance.
+Je tiens à exprimer ma gratitude la plus vive à mon encadrant pédagogique à l'EST Meknès, **Monsieur le Professeur A. ABOULFARAJ**, pour son soutien précieux, ses conseils méthodologiques éclairés, sa rigueur et sa grande disponibilité lors de nos échanges à distance.
 
 Mes remerciements les plus chaleureux vont également à l'entreprise d'accueil **Kinova Tech** (`https://kinovatech.com`), et tout particulièrement au **Responsable du Département IA**, pour m'avoir accueilli au sein de ses équipes techniques en modalité à distance (télétravail), pour la confiance accordée lors des points quotidiens et pour la qualité du sujet proposé.
 
@@ -62,7 +62,7 @@ Enfin, j'adresse mes remerciements à toutes les personnes qui ont contribué de
 
 Dans le cadre du diplôme préparé à l'**École Supérieure de Technologie de Meknès (Université Moulay Ismaïl)** en **Génie Informatique**, les étudiants sont amenés à effectuer un stage professionnel afin de confronter leurs connaissances théoriques aux exigences concrètes du marché de l'ingénierie informatique.
 
-Mon stage s'est déroulé au sein de la société **Kinova Tech** en modalité **À Distance (Remote / Télétravail)** sous l'encadrement pédagogique de **Prof. A. ABOULFARAJ**. Cette organisation s'est appuyée sur des méthodes agiles collaboratives à distance : points de suivi quotidiens (Daily Standup), revues de code asynchrones sur Git/GitHub, communication continue via messagerie professionnelle et outils de visio-conférence.
+Mon stage s'est déroulé au sein de la société **Kinova Tech** en modalité **À Distance (Remote / Télétravail)** sous l'encadrement pédagogique de **Prof. A. ABOULFARAJ (EST Meknès)**. Cette organisation s'est appuyée sur des méthodes agiles collaboratives à distance : points de suivi quotidiens (Daily Standup), revues de code asynchrones sur Git/GitHub, communication continue via messagerie professionnelle et outils de visio-conférence.
 
 Le présent rapport décrit la conception, l'architecture technique retenue (Moteur Hybride 3-Layer : Regex déterministe, spaCy NER, Enrichment LLM) et la mise en œuvre pratique de cette application de parsing intelligent de CVs conforme aux contraintes de la **Loi marocaine n° 09-08 (CNDP)**.
 
@@ -73,14 +73,14 @@ Le présent rapport décrit la conception, l'architecture technique retenue (Mot
 ### 3.1 Établissement d'Origine : EST Meknès (UMI)
 L'**École Supérieure de Technologie de Meknès (ESTM)**, rattachée à l'**Université Moulay Ismaïl (UMI)** (`https://www.est.umi.ac.ma/`), est un établissement public d'enseignement supérieur d'excellence formant des techniciens supérieurs et ingénieurs d'application hautement qualifiés en **Génie Informatique**.
 
-### 3.2 Entreprise d'Accueil : Kinova Tech
+### 3.2 Fiche Signalétique de l'Entreprise : Kinova Tech
 **Kinova Tech** (`https://kinovatech.com`) est une entreprise d'ingénierie logicielle et de conseil technologique spécialisée dans la transformation numérique souveraine, l'Intelligence Artificielle, la Cybersécurité et la numérisation des processus d'affaires RH.
 
 - **Raison Sociale** : Kinova Tech (KINOVATECH)
 - **Site Web Officiel** : `https://kinovatech.com`
 - **Slogan Institutionnel** : *« Accélérez votre transformation numérique en toute souveraineté »*
 - **Siège Social** : IMM 97 B, AV HASSAN SGHIR, 4ÈME ÉTAGE, N°126, Casablanca, Maroc
-- **Téléphone Contact** : +212 661-896943 / +212 648-020096
+- **Téléphone Contact** : +212 661-896943 / +212 648-020096 *(WhatsApp uniquement)*
 - **Email Contact** : `contact@kinovatech.com`
 - **Domaines d'Expertise Majeurs** :
   1. **Intelligence Artificielle & IA Générative** : Conseil, formation et développement de solutions de parsing et de machine learning pour optimiser les processus métiers.
@@ -192,7 +192,7 @@ Le moteur **KINOVATECH CV Parser** livre des performances élevées (temps de tr
 Titre   : Application de Parsing Intelligent de CVs, Anonymisation PII & Dashboard
 Élève   : YOUSSEF TAICHA
 Filière : Génie Informatique — EST Meknès (Université Moulay Ismaïl)
-Encadrant: Prof. A. ABOULFARAJ (EST Meknès)
+Encadrant Pédagogique: Prof. A. ABOULFARAJ (EST Meknès)
 Entreprise: Kinova Tech (https://kinovatech.com) — Dépt. IA & Direction IT
 Modalité: Stage à Distance / Remote (Télétravail)
 
