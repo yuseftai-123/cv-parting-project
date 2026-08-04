@@ -134,7 +134,7 @@ def test_detect_name_first_line_heuristic():
     text = "Yassine El Amrani\nDeveloppeur Fullstack\nEmail: yassine@test.ma"
     res = detect_name(text)
     assert res["value"] == "Yassine El Amrani"
-    assert res["confidence"] == 0.85
+    assert res["confidence"] == 0.95
 
 # --- Full PII Aggregation & JSON Schema Compliance Test ---
 def test_detect_pii_full_schema():

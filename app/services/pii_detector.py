@@ -84,9 +84,8 @@ def detect_name(text: str) -> dict:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if lines:
         first_line = lines[0]
-        # Match 2-4 capitalized or uppercase words (e.g., Salma EL AMRANI, Youssef TAICHA)
         if re.match(r'^[A-ZÀ-ÿ][A-Za-zÀ-ÿ\'-]+\s+(?:[A-ZÀ-ÿ][A-Za-zÀ-ÿ\'-]+\s*){1,3}$', first_line):
-            return {"value": first_line, "masked": False, "confidence": 0.85}
+            return {"value": first_line, "masked": False, "confidence": 0.95}
             
     return {"value": None, "masked": False, "confidence": 0.0}
 
