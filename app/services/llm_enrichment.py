@@ -54,8 +54,8 @@ class DefaultMockLLMClient:
         # Extract companies ONLY from structured "Title — Company" header lines,
         # not from truncated description fragments (fixes mid-word truncation bug)
         comp_matches = re.findall(
-            r"(?i)(?:engineer|developer|consultant|intern|stagiaire|ingénieur|développeur)"
-            r"\s+[—–\-]\s+([A-ZÀ-ÿ][A-Za-z0-9À-ÿ\s&.\-]+?)(?:\s*\(|\s*$)",
+            r"(?i)(?:engineer|developer|consultant|intern|stagiaire|ingénieure?|développeur|logiciel|projet|chef|assistant)"
+            r"[A-Za-zÀ-ÿ\s]*\s+[—–\-]\s+([A-ZÀ-ÿ][A-Za-z0-9À-ÿ\s&.\-]+?)(?:\s*\(|\s*$)",
             masked_text,
             re.MULTILINE
         )

@@ -422,6 +422,9 @@ def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
             diplome_val = re.sub(r"(?i)\s+University\s+of.*$", "", diplome_val).strip()
         if etablissement_val:
             etablissement_val = re.sub(r"\s*\n\s*", " ", etablissement_val).strip()
+            # Fix unbalanced parentheses: if has '(' but no ')', add closing ')'
+            if "(" in etablissement_val and ")" not in etablissement_val:
+                etablissement_val = etablissement_val + ")"
         if domaine:
             domaine = re.sub(r"\s*\n\s*", " ", domaine).strip()
 
