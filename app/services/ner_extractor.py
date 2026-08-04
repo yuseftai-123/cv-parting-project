@@ -1,7 +1,7 @@
 """
 NER Extractor Service (Layer 2) - Non-PII Entity Extraction
 Uses spaCy fr_core_news_lg for ORG/DATE entities and regex patterns for job titles & diplomas.
-French and English only (per MVP scope).
+Enhanced Section Splitting & Blacklist Filtering.
 """
 import re
 import logging
@@ -42,8 +42,19 @@ def _get_en_model():
             logger.info("Loaded spaCy model: en_core_web_sm")
         except OSError:
             logger.info("en_core_web_sm not available; using fr model for English text")
-            _nlp_en = False  # sentinel: tried and failed
+            _nlp_en = False  # sentinel
     return _nlp_en if _nlp_en is not False else None
+
+
+# ---------------------------------------------------------------------------
+# Blacklist for falsely recognized company names (ORG)
+# ---------------------------------------------------------------------------
+ORG_BLACKLIST = {
+    "SOFT", "SOFT SKILLS", "SKILLS", "ACTIVITÉS", "PARASCOLAIRES", "PORTFOLIO",
+    "ACADEMIQUES", "ACADÉMIQUES", "CLUB", "HUMANITAIRE", "COMPÉTENCES", "COMPETENCES",
+    "LANGUES", "HOBBIES", "INTERETS", "INTÉRÊTS", "FORMATION", "FORMATIONS",
+    "DIPLÔMES", "DIPLOMES", "PROJETS", "EXPERIENCES", "EXPÉRIENCES"
+}
 
 
 # ---------------------------------------------------------------------------
@@ -51,52 +62,54 @@ def _get_en_model():
 # ---------------------------------------------------------------------------
 EXPERIENCE_HEADERS = re.compile(
     r"(?i)^(?:exp[eé]riences?\s*professionnelles?|work\s+experience|professional\s+experience"
-    r"|employment\s+history|parcours\s+professionnel)",
+    r"|employment\s+history|parcours\s+professionnel|exp[eé]riences?)",
     re.MULTILINE,
 )
 
 EDUCATION_HEADERS = re.compile(
     r"(?i)^(?:formations?|[eé]ducation|education|academic\s+background"
-    r"|dipl[oô]mes?|qualifications?|parcours\s+acad[eé]mique)",
+    r"|dipl[oô]mes?|qualifications?|parcours\s+acad[eé]mique|activit[eé]s?\s+parascolaires?|[eé]tudes)",
     re.MULTILINE,
 )
 
-# Any section header (used to find the boundary of a section)
+SKILLS_HEADERS = re.compile(
+    r"(?i)^(?:comp[eé]tences?|skills|soft\s+skills|hard\s+skills|savoir-faire|langues|languages)",
+    re.MULTILINE,
+)
+
 ANY_SECTION_HEADER = re.compile(
     r"(?i)^(?:exp[eé]riences?\s*professionnelles?|work\s+experience|professional\s+experience"
-    r"|employment\s+history|parcours\s+professionnel"
+    r"|employment\s+history|parcours\s+professionnel|exp[eé]riences?"
     r"|formations?|[eé]ducation|education|academic\s+background"
-    r"|dipl[oô]mes?|qualifications?|parcours\s+acad[eé]mique"
-    r"|comp[eé]tences?|skills|langues|languages|centres?\s+d.int[eé]r[eê]t"
-    r"|hobbies|loisirs|projets?|projects?|certifications?"
+    r"|dipl[oô]mes?|qualifications?|parcours\s+acad[eé]mique|activit[eé]s?\s+parascolaires?|[eé]tudes"
+    r"|comp[eé]tences?|skills|soft\s+skills|hard\s+skills|savoir-faire|langues|languages|centres?\s+d.int[eé]r[eê]t"
+    r"|hobbies|loisirs|projets?|projects?|portfolio|portfolio\s+acad[eé]miques?|certifications?"
     r"|r[eé]f[eé]rences?|references|profil|profile|summary|objectif)",
     re.MULTILINE,
 )
 
 # ---------------------------------------------------------------------------
-# Job title patterns (regex-based, no fine-tuning)
+# Job title patterns
 # ---------------------------------------------------------------------------
-# Note: Using double-quoted raw strings to avoid issues with single quotes
-APOS = "['\u2019]"  # matches ASCII apostrophe or Unicode right single quote
+APOS = "['\u2019]"
 
 JOB_TITLE_PATTERNS = re.compile(
     r"(?i)\b("
-    # French titles
     r"ing[eé]nieur(?:\s+(?:d" + APOS + r"?[eé]tat|en|informatique|logiciel|r[eé]seaux|civil|industriel))?"
     r"|d[eé]veloppeur(?:\s+(?:web|full\s*stack|front[\s-]*end|back[\s-]*end|mobile|java|python|\.net))?"
     r"|chef\s+de\s+(?:projet|produit|d[eé]partement)"
-    r"|responsable\s+(?:technique|informatique|qualit[eé]|commercial|rh|marketing)"
+    r"|responsable\s+(?:technique|informatique|qualit[eé]|commercial|rh|marketing|de\s+l" + APOS + r"?infographie)"
     r"|directeur(?:\s+(?:technique|g[eé]n[eé]ral|commercial|financier|artistique))?"
     r"|technicien(?:\s+(?:sup[eé]rieur|informatique|r[eé]seaux|maintenance))?"
     r"|consultant(?:\s+(?:fonctionnel|technique|s[eé]nior|junior|it|sap|bi))?"
     r"|analyste(?:\s+(?:programmeur|fonctionnel|de\s+donn[eé]es|financier|business))?"
     r"|administrateur(?:\s+(?:syst[èe]me|base\s+de\s+donn[eé]es|r[eé]seaux?))?"
     r"|comptable|auditeur|juriste|avoca?t"
+    r"|vice[\s-]*pr[eé]sident|pr[eé]sident"
     r"|gestionnaire(?:\s+de\s+(?:stock|paie|projet))?"
     r"|assistant(?:e)?(?:\s+(?:de\s+direction|administratif|commercial|rh))?"
     r"|stagiaire(?:\s+(?:en|p[eé]dagogique))?"
     r"|architecte(?:\s+(?:logiciel|solution|cloud|si))?"
-    # English titles
     r"|software\s+engineer(?:\s+(?:senior|junior|lead|principal))?"
     r"|(?:senior|junior|lead|principal|staff)\s+(?:software\s+)?engineer"
     r"|data\s+(?:scientist|analyst|engineer)"
@@ -116,14 +129,13 @@ JOB_TITLE_PATTERNS = re.compile(
 # ---------------------------------------------------------------------------
 DIPLOMA_PATTERNS = re.compile(
     r"(?i)\b("
-    # French diplomas
     r"baccalaur[eé]at|bac(?:\s*\+\s*\d)?"
     r"|licence(?:\s+professionnelle)?|master(?:\s+(?:sp[eé]cialis[eé]|recherche|professionnel))?"
     r"|doctorat|th[èe]se"
+    r"|cycle\s+ing[eé]nieur(?:\s+d" + APOS + r"?[eé]tat)?"
     r"|dipl[oô]me\s+(?:d" + APOS + r"?ing[eé]nieur|d" + APOS + r"?[eé]tat|universitaire)"
     r"|dut|deug|deust|bts|cpge"
     r"|ing[eé]nieur\s+d" + APOS + r"?[eé]tat"
-    # English diplomas
     r"|bachelor(?:" + APOS + r"?s)?(?:\s+(?:of\s+(?:science|arts|engineering)))?"
     r"|b\.?sc?\.?|b\.?a\.?|b\.?eng\.?"
     r"|master(?:" + APOS + r"?s)?(?:\s+(?:of\s+(?:science|arts|engineering|business)))?"
@@ -135,10 +147,21 @@ DIPLOMA_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
+# ---------------------------------------------------------------------------
+# Known Tech Stack Regex Extractor
+# ---------------------------------------------------------------------------
+TECH_SKILLS_PATTERNS = re.compile(
+    r"(?i)\b("
+    r"html5?|css3?|javascript|js|typescript|ts|python|java|c\+\+|c#|php|ruby|go|golang|rust|swift|kotlin"
+    r"|react(?:\.js)?|vue(?:\.js)?|angular|node(?:\.js)?|express|fastapi|flask|django|spring\s+boot"
+    r"|postgresql|postgres|mysql|sqlite|mongodb|redis|oracle|sql"
+    r"|docker|kubernetes|aws|azure|gcp|git|github|gitlab|ci/cd"
+    r"|adobe\s+xd|figma|photoshop|illustrator|canva"
+    r"|spacy|nltk|transformers|scikit-learn|tensorflow|pytorch|opencv"
+    r")\b",
+    re.IGNORECASE,
+)
 
-# ---------------------------------------------------------------------------
-# Date extraction helper
-# ---------------------------------------------------------------------------
 DATE_RANGE_PATTERN = re.compile(
     r"(?i)("
     r"\d{4}\s*[-\u2013\u2014/\u00e0]\s*(?:\d{4}|pr[eé]sent|aujourd" + APOS + r"?hui|present|current|en\s+cours)"
@@ -162,9 +185,7 @@ def _extract_date_range(text: str) -> Dict[str, Optional[str]]:
     if not matches:
         return result
 
-    # Take the first match as the primary date range
     first = matches[0].strip()
-    # Check if it contains a range separator
     range_sep = re.search(r"[-\u2013\u2014/\u00e0]", first)
     if range_sep:
         parts = re.split(r"\s*[-\u2013\u2014/\u00e0]\s*", first, maxsplit=1)
@@ -173,37 +194,29 @@ def _extract_date_range(text: str) -> Dict[str, Optional[str]]:
             result["date_fin"] = parts[1].strip()
             return result
 
-    # If just a single year, treat it as date_debut
     result["date_debut"] = first
     if len(matches) > 1:
         result["date_fin"] = matches[1].strip()
     return result
 
 
-# ---------------------------------------------------------------------------
-# Section splitter
-# ---------------------------------------------------------------------------
 def _split_sections(text: str) -> Dict[str, str]:
     """
     Split CV text into sections based on heading keywords.
-    Returns dict with keys: 'experience', 'education', 'other'.
+    Returns dict with keys: 'experience', 'education', 'skills', 'other'.
     """
-    sections = {"experience": "", "education": "", "other": ""}
+    sections = {"experience": "", "education": "", "skills": "", "other": ""}
 
-    # Find all section header positions
     all_headers = list(ANY_SECTION_HEADER.finditer(text))
 
     if not all_headers:
-        # No headers found - treat entire text as 'other'
         sections["other"] = text
         return sections
 
-    # Add text before the first header as 'other' (usually contact info)
     if all_headers[0].start() > 0:
         sections["other"] = text[: all_headers[0].start()]
 
     for i, match in enumerate(all_headers):
-        # Determine the end of this section (start of next header or end of text)
         start = match.end()
         end = all_headers[i + 1].start() if i + 1 < len(all_headers) else len(text)
         section_text = text[start:end].strip()
@@ -213,59 +226,50 @@ def _split_sections(text: str) -> Dict[str, str]:
             sections["experience"] += "\n" + section_text
         elif EDUCATION_HEADERS.match(header_text):
             sections["education"] += "\n" + section_text
+        elif SKILLS_HEADERS.match(header_text):
+            sections["skills"] += "\n" + section_text
         else:
             sections["other"] += "\n" + section_text
 
     return sections
 
 
-# ---------------------------------------------------------------------------
-# Entity extraction from a section block
-# ---------------------------------------------------------------------------
+def _filter_orgs(org_list: List[str]) -> List[str]:
+    """Filter out falsely recognized company names matching the blacklist."""
+    valid_orgs = []
+    for org in org_list:
+        clean_org = org.strip().strip(":").strip()
+        if clean_org and clean_org.upper() not in ORG_BLACKLIST and len(clean_org) > 2:
+            valid_orgs.append(clean_org)
+    return valid_orgs
+
+
 def _extract_experience_entries(text: str, nlp) -> List[Dict[str, Any]]:
     """
     Extract experience entries from a text block.
-    Uses spaCy for ORG detection, regex for job titles and dates.
+    Uses spaCy for ORG detection (filtered), regex for job titles and dates.
     """
     if not text.strip():
         return []
 
     entries = []
-    doc = nlp(text[:100000])  # Limit text length for performance
-
-    # Collect all ORG entities from spaCy
-    org_entities = [ent.text.strip() for ent in doc.ents if ent.label_ == "ORG"]
-
-    # Collect all job titles from regex
-    job_titles = [m.group(0).strip() for m in JOB_TITLE_PATTERNS.finditer(text)]
-
-    # Split text into paragraph blocks to try to group entries
     blocks = re.split(r"\n\s*\n", text)
     blocks = [b.strip() for b in blocks if b.strip()]
-
-    if not blocks:
-        # Single-block fallback
-        dates = _extract_date_range(text)
-        entries.append({
-            "poste": job_titles[0] if job_titles else None,
-            "entreprise": org_entities[0] if org_entities else None,
-            "date_debut": dates["date_debut"],
-            "date_fin": dates["date_fin"],
-            "description": text[:200].strip() if text else None,
-        })
-        return entries
 
     for block in blocks:
         if len(block) < 10:
             continue
 
-        # Run NER on this block
+        # Skip block if it is purely education/formation
+        if re.search(r"(?i)\b(?:cycle\s+ing[eé]nieur|dipl[oô]me|baccalaur[eé]at|licence|master|dut|bts)\b", block):
+            continue
+
         block_doc = nlp(block[:10000])
-        block_orgs = [ent.text.strip() for ent in block_doc.ents if ent.label_ == "ORG"]
+        raw_orgs = [ent.text.strip() for ent in block_doc.ents if ent.label_ == "ORG"]
+        block_orgs = _filter_orgs(raw_orgs)
         block_titles = [m.group(0).strip() for m in JOB_TITLE_PATTERNS.finditer(block)]
         block_dates = _extract_date_range(block)
 
-        # Only create an entry if we found at least a job title or an org
         if block_titles or block_orgs:
             entries.append({
                 "poste": block_titles[0] if block_titles else None,
@@ -274,17 +278,6 @@ def _extract_experience_entries(text: str, nlp) -> List[Dict[str, Any]]:
                 "date_fin": block_dates["date_fin"],
                 "description": block[:200].strip(),
             })
-
-    # If we found no structured entries, create one from overall findings
-    if not entries and (job_titles or org_entities):
-        dates = _extract_date_range(text)
-        entries.append({
-            "poste": job_titles[0] if job_titles else None,
-            "entreprise": org_entities[0] if org_entities else None,
-            "date_debut": dates["date_debut"],
-            "date_fin": dates["date_fin"],
-            "description": text[:200].strip(),
-        })
 
     return entries
 
@@ -298,35 +291,16 @@ def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
         return []
 
     entries = []
-    doc = nlp(text[:100000])
-
-    # Collect ORG entities (schools, universities)
-    org_entities = [ent.text.strip() for ent in doc.ents if ent.label_ == "ORG"]
-
-    # Collect diploma patterns
-    diplomas = [m.group(0).strip() for m in DIPLOMA_PATTERNS.finditer(text)]
-
-    # Split into blocks
     blocks = re.split(r"\n\s*\n", text)
     blocks = [b.strip() for b in blocks if b.strip()]
-
-    if not blocks:
-        dates = _extract_date_range(text)
-        entries.append({
-            "diplome": diplomas[0] if diplomas else None,
-            "etablissement": org_entities[0] if org_entities else None,
-            "date_debut": dates["date_debut"],
-            "date_fin": dates["date_fin"],
-            "description": text[:200].strip() if text else None,
-        })
-        return entries
 
     for block in blocks:
         if len(block) < 10:
             continue
 
         block_doc = nlp(block[:10000])
-        block_orgs = [ent.text.strip() for ent in block_doc.ents if ent.label_ == "ORG"]
+        raw_orgs = [ent.text.strip() for ent in block_doc.ents if ent.label_ == "ORG"]
+        block_orgs = _filter_orgs(raw_orgs)
         block_diplomas = [m.group(0).strip() for m in DIPLOMA_PATTERNS.finditer(block)]
         block_dates = _extract_date_range(block)
 
@@ -339,60 +313,57 @@ def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
                 "description": block[:200].strip(),
             })
 
-    # Fallback
-    if not entries and (diplomas or org_entities):
-        dates = _extract_date_range(text)
-        entries.append({
-            "diplome": diplomas[0] if diplomas else None,
-            "etablissement": org_entities[0] if org_entities else None,
-            "date_debut": dates["date_debut"],
-            "date_fin": dates["date_fin"],
-            "description": text[:200].strip(),
-        })
-
     return entries
 
 
-# ---------------------------------------------------------------------------
-# Main public API
-# ---------------------------------------------------------------------------
+def extract_tech_skills(text: str) -> List[str]:
+    """Extract technical skills found anywhere in the CV text."""
+    matches = TECH_SKILLS_PATTERNS.findall(text)
+    # Deduplicate while preserving order and proper capitalization
+    unique_skills = []
+    seen = set()
+    for m in matches:
+        clean = m.strip()
+        upper = clean.upper()
+        if upper not in seen:
+            seen.add(upper)
+            unique_skills.append(clean)
+    return unique_skills
+
+
 def extract_ner(text: str) -> Dict[str, Any]:
     """
     Main entry point for NER extraction (Layer 2).
-    
-    Takes raw CV text (already PII-masked), extracts non-PII entities:
-    - experiences: job titles, companies, date ranges
-    - formations: diplomas, schools, date ranges
-    
-    Returns dict matching the spec's experiences/formations structure.
+    Extracts non-PII entities: experiences, formations, and technical skills.
     """
     nlp = _get_fr_model()
     if nlp is None:
         logger.error("No spaCy model available. Cannot run NER extraction.")
-        return {"experiences": [], "formations": []}
+        return {"experiences": [], "formations": [], "competences": {"techniques": []}}
 
     # 1. Split text into sections
     sections = _split_sections(text)
 
-    # 2. Extract experiences
+    # 2. Extract experiences & formations
     experiences = _extract_experience_entries(sections["experience"], nlp)
-
-    # 3. Extract formations
     formations = _extract_education_entries(sections["education"], nlp)
 
-    # 4. If no experiences found in experience section, also try the 'other' section
-    #    (handles CVs where experiences appear before any section header)
+    # 3. If section splitting missed entries, scan 'other' section
+    if not formations and sections["other"].strip():
+        formations = _extract_education_entries(sections["other"], nlp)
+
     if not experiences and sections["other"].strip():
-        logger.info("No experience section found; trying 'other' section")
         experiences = _extract_experience_entries(sections["other"], nlp)
 
-    # 5. If still nothing, try extracting from the full text
-    if not experiences and not formations:
-        logger.info("No section headers found; attempting full-text extraction")
-        experiences = _extract_experience_entries(text, nlp)
-        formations = _extract_education_entries(text, nlp)
+    # 4. Extract tech skills from entire CV text
+    tech_skills = extract_tech_skills(text)
 
     return {
         "experiences": experiences,
         "formations": formations,
+        "competences": {
+            "techniques": tech_skills,
+            "langues": [],
+            "certifications": []
+        }
     }
