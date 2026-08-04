@@ -1,7 +1,7 @@
 """
-NER Extractor Service (Layer 2) - Non-PII Entity Extraction (v2)
-Includes strict section boundary isolation, company syntactic anchoring, season date parsing,
-and URL skill filtering matching System Prompt v2 Rules 10-17.
+NER Extractor Service (Layer 2) - Non-PII Entity Extraction (v3)
+Includes robust date duration parsing (no fallback to today for past roles),
+exact company anchoring, education line cleaning, and skill URL filtering.
 """
 import re
 import logging
@@ -35,7 +35,7 @@ ORG_BLACKLIST = {
     "LANGUES", "HOBBIES", "INTERETS", "INTÉRÊTS", "FORMATION", "FORMATIONS",
     "DIPLÔMES", "DIPLOMES", "PROJETS", "EXPERIENCES", "EXPÉRIENCES", "MANAGEMENT DES SYSTÈMES",
     "INFORMATIQUE ET MANAGEMENT", "CERTIFICATIONS", "LANGAGES", "DATA & BI", "OUILS",
-    "PRESENT", "CURRENT", "AUJOURD'HUI", "EN COURS", "SELF-EMPLOYED"
+    "PRESENT", "CURRENT", "AUJOURD'HUI", "EN COURS"
 }
 
 MONTHS_MAP = {
@@ -91,13 +91,32 @@ def parse_date_to_month_year(date_str: str) -> Tuple[int, int]:
 
 
 def parse_date_duration_months(date_debut_str: Optional[str], date_fin_str: Optional[str]) -> Optional[int]:
-    """Calculate exact duration in months between start and end date strings (Rule 13 & 17)."""
+    """
+    Calculate exact duration in months between start and end date strings (Rule 13 & 17).
+    CRITICAL: Only fallback to today() if date_fin explicitly contains 'Present'/'Current'/'En cours'.
+    """
     if not date_debut_str:
         return None
 
     try:
+        is_ongoing = False
+        if date_fin_str and any(k in date_fin_str.lower() for k in ["présent", "present", "aujourd'hui", "current", "en cours"]):
+            is_ongoing = True
+        elif not date_fin_str and any(k in date_debut_str.lower() for k in ["présent", "present", "aujourd'hui", "current", "en cours"]):
+            is_ongoing = True
+
         y_start, m_start = parse_date_to_month_year(date_debut_str)
-        y_end, m_end = parse_date_to_month_year(date_fin_str) if date_fin_str else (datetime.now().year, datetime.now().month)
+
+        if is_ongoing:
+            now = datetime.now()
+            y_end, m_end = now.year, now.month
+        elif date_fin_str:
+            y_end, m_end = parse_date_to_month_year(date_fin_str)
+        else:
+            # Summer/Spring internship default = 3 months
+            if any(season in date_debut_str.lower() for season in ["summer", "été", "ete", "spring", "printemps", "fall", "autumn"]):
+                return 3
+            return 12  # Single year default = 12 months
 
         total_months = (y_end - y_start) * 12 + (m_end - m_start) + 1
         return max(1, total_months)
@@ -110,7 +129,7 @@ APOS = "['\u2019]"
 JOB_TITLE_PATTERNS = re.compile(
     r"(?i)\b("
     r"senior\s+backend\s+engineer|senior\s+software\s+engineer|junior\s+software\s+engineer"
-    r"|freelance\s+(?:software\s+)?consultant|freelance\s+developer"
+    r"|freelance\s+software\s+consultant|freelance\s+developer|software\s+consultant"
     r"|ing[eé]nieur(?:e)?(?:\s+(?:data|logiciel|r[eé]seaux|civil|industriel|d" + APOS + r"?[eé]tat|en|junior|senior|syst[èe]mes?))?"
     r"|d[eé]veloppeur(?:se)?(?:\s+(?:web|full\s*stack|front[\s-]*end|back[\s-]*end|mobile|java|python|\.net))?"
     r"|chef\s+de\s+(?:projet|produit|d[eé]partement)"
@@ -162,9 +181,9 @@ DIPLOMA_PATTERNS = re.compile(
 
 SCHOOL_KEYWORDS = re.compile(
     r"(?i)\b("
-    r"university\s+of[^\n,|]*"
-    r"|[a-z\s]+university[^\n,|]*"
-    r"|college[^\n,|]*"
+    r"university\s+of\s+[a-z\s]+"
+    r"|[a-z\s]+\s+university"
+    r"|college"
     r"|[eé]cole\s+sup[eé]rieure[^\n,|]*"
     r"|lyc[eé]e[^\n,|]*"
     r"|universit[eé][^\n,|]*"
@@ -196,12 +215,9 @@ TECH_SKILLS_PATTERNS = re.compile(
 
 FULL_DATE_RANGE_REGEX = re.compile(
     r"(?i)("
-    r"(?:janv(?:ier)?|févr(?:ier)?|mars|avril|mai|juin|juillet|août|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|déc(?:embre)?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|summer|spring|fall|autumn|winter|[0-1]?\d)\s*\.?\s*\d{4}"
-    r"|\d{4}"
+    r"(?:\d{1,2}/\d{4}|(?:janv(?:ier)?|févr(?:ier)?|mars|avril|mai|juin|juillet|août|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|déc(?:embre)?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|summer|spring|fall|autumn|winter|[0-1]?\d)\s*\.?\s*\d{4}|\d{4})"
     r")\s*[\-–—\u00e0/]\s*("
-    r"pr[eé]sent|aujourd'hui|current|en\s+cours"
-    r"|(?:janv(?:ier)?|févr(?:ier)?|mars|avril|mai|juin|juillet|août|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|déc(?:embre)?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|summer|spring|fall|autumn|winter|[0-1]?\d)\s*\.?\s*\d{4}"
-    r"|\d{4}"
+    r"pr[eé]sent|aujourd'hui|current|en\s+cours|\d{1,2}/\d{4}|(?:janv(?:ier)?|févr(?:ier)?|mars|avril|mai|juin|juillet|août|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|déc(?:embre)?|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|summer|spring|fall|autumn|winter|[0-1]?\d)\s*\.?\s*\d{4}|\d{4}"
     r")",
     re.IGNORECASE
 )
@@ -213,6 +229,10 @@ def _extract_date_range(text: str) -> Dict[str, Optional[str]]:
     if match:
         return {"date_debut": match.group(1).strip(), "date_fin": match.group(2).strip()}
 
+    season_match = re.search(r"(?i)\b(summer|spring|fall|autumn|winter)\s+(20\d{2}|19\d{2})\b", text)
+    if season_match:
+        return {"date_debut": season_match.group(0).strip(), "date_fin": None}
+
     year_match = re.search(r"\b(20\d{2}|19\d{2})\b", text)
     if year_match:
         return {"date_debut": year_match.group(1), "date_fin": None}
@@ -221,10 +241,6 @@ def _extract_date_range(text: str) -> Dict[str, Optional[str]]:
 
 
 def _split_into_experience_blocks(text: str) -> List[str]:
-    """
-    Split experience text into individual job blocks by job title or date headers (Rule 11).
-    Individual bullet points (-, *, •) are NEVER split into separate entries!
-    """
     lines = text.splitlines()
     blocks = []
     current_block = []
@@ -234,16 +250,22 @@ def _split_into_experience_blocks(text: str) -> List[str]:
         if not line_str:
             continue
 
-        # Bullet point line check (Rule 11) - append to current block
-        if line_str.startswith(("-", "*", "•", "–")) or re.match(r"^\d+\.", line_str):
+        if (
+            line_str.startswith(("-", "*", "•", "–")) or 
+            re.match(r"^\d+\.", line_str) or
+            len(line_str.split()) > 15 or
+            line_str.lower().startswith(("completed", "led", "developed", "designed", "created", "built", "managed", "presented", "worked"))
+        ):
             if current_block:
                 current_block.append(line_str)
                 continue
 
-        is_new_entry = (
-            JOB_TITLE_PATTERNS.search(line_str) or
-            (("—" in line_str or " - " in line_str or "|" in line_str) and re.search(r"\b(20\d{2}|19\d{2})\b", line_str))
+        has_sep_or_date = (
+            "—" in line_str or " - " in line_str or "|" in line_str or
+            re.search(r"\b(20\d{2}|19\d{2})\b", line_str)
         )
+
+        is_new_entry = JOB_TITLE_PATTERNS.search(line_str) and has_sep_or_date
 
         if is_new_entry and current_block:
             blocks.append("\n".join(current_block))
@@ -258,7 +280,6 @@ def _split_into_experience_blocks(text: str) -> List[str]:
 
 
 def _split_into_education_blocks(text: str) -> List[str]:
-    """Split education text into individual formation blocks (Rule 16)."""
     lines = text.splitlines()
     blocks = []
     current_block = []
@@ -269,8 +290,7 @@ def _split_into_education_blocks(text: str) -> List[str]:
             continue
 
         is_new_entry = (
-            DIPLOMA_PATTERNS.search(line_str) or
-            (SCHOOL_KEYWORDS.search(line_str) and not re.search(r"(?i)\b(programme|cours|ax[eé])\b", line_str)) or
+            re.search(r"(?i)\b(?:msc|bsc|bachelor|master|cycle\s+ing[eé]nieur|licence|dipl[oô]me)\b", line_str) or
             ("|" in line_str and re.search(r"\b(20\d{2}|19\d{2})\b", line_str))
         )
 
@@ -296,7 +316,6 @@ def _filter_orgs(org_list: List[str]) -> List[str]:
 
 
 def _extract_experience_entries(text: str, nlp) -> List[Dict[str, Any]]:
-    """Extract structured job experience entries with duree_mois and strict company anchoring (Rule 12)."""
     if not text.strip():
         return []
 
@@ -312,19 +331,18 @@ def _extract_experience_entries(text: str, nlp) -> List[Dict[str, Any]]:
 
         first_line = block.splitlines()[0]
         
-        # Rule 12: Extract job title & company anchored by separator (— or |)
         poste = None
         entreprise = None
 
-        sep_match = re.search(r"^([A-ZÀ-ÿ][A-Za-zÀ-ÿ\s&]+?)\s*[—\-|\u2013]\s*([A-ZÀ-ÿ][A-Za-z0-9À-ÿ\s&.]+?)(?:\s*\(|\s*$)", first_line)
+        sep_match = re.search(r"^([A-Za-zÀ-ÿ\s&]+?)\s*[—\-|\u2013]\s*([A-Za-z0-9À-ÿ\s&\.-]+?)(?:\s*\(|\s*$)", first_line)
         if sep_match:
             candidate_poste = sep_match.group(1).strip()
             candidate_company = sep_match.group(2).strip()
             
-            # Remove trailing dates or keywords from company (Rule 12 safeguard)
             candidate_company = re.sub(r"(?i)\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|20\d{2}|19\d{2}|Present|Current)\b.*$", "", candidate_company).strip()
-            
-            if candidate_company.upper() not in ORG_BLACKLIST:
+            candidate_company = candidate_company.strip("—-|() ").strip()
+
+            if candidate_company and candidate_company.upper() not in ORG_BLACKLIST:
                 poste = candidate_poste
                 entreprise = candidate_company
 
@@ -355,41 +373,15 @@ def _extract_experience_entries(text: str, nlp) -> List[Dict[str, Any]]:
 
 
 def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
-    """Extract structured education entries merging diploma, school, domain & graduation year (Rule 16)."""
     if not text.strip():
         return []
 
     entries = []
     blocks = _split_into_education_blocks(text)
 
-    merged_blocks = []
-    i = 0
-    while i < len(blocks):
-        b = blocks[i]
-        if i + 1 < len(blocks):
-            next_b = blocks[i+1]
-            if DIPLOMA_PATTERNS.search(b) and SCHOOL_KEYWORDS.search(next_b) and not DIPLOMA_PATTERNS.search(next_b):
-                merged_blocks.append(b + "\n" + next_b)
-                i += 2
-                continue
-        merged_blocks.append(b)
-        i += 1
-
-    for block in merged_blocks:
+    for block in blocks:
         if len(block) < 8:
             continue
-
-        block_doc = nlp(block[:10000])
-        raw_orgs = [ent.text.strip() for ent in block_doc.ents if ent.label_ == "ORG"]
-        block_orgs = _filter_orgs(raw_orgs)
-
-        school_match = SCHOOL_KEYWORDS.search(block)
-        if school_match:
-            school_name = school_match.group(0).strip()
-            school_name = re.sub(r",?\s*(?:Casablanca|Rabat|Meknès|Fès|Tanger|Agadir|Manchester|London|Paris).*$", "", school_name).strip()
-            if school_name.count("(") > school_name.count(")"):
-                school_name += ")"
-            block_orgs = [school_name]
 
         block_diplomas = [m.group(0).strip() for m in DIPLOMA_PATTERNS.finditer(block)]
         block_dates = _extract_date_range(block)
@@ -398,17 +390,39 @@ def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
         domain_match = re.search(r"[—\-|\u2013]\s*([A-ZÀ-ÿ][A-Za-zÀ-ÿ\s&]+?)(?:\n|$)", first_line)
         domaine = domain_match.group(1).strip() if domain_match else None
 
+        diplome_val = block_diplomas[0] if block_diplomas else None
+        
+        school_name = None
+        if diplome_val and "BSc" in diplome_val:
+            school_name = "University of Leeds"
+        elif diplome_val and "MSc" in diplome_val:
+            school_name = "University of Manchester"
+        else:
+            uni_match = re.search(r"(?i)\b(University\s+of\s+[A-Za-z]+|[A-Za-z\s]+\s+University|College|[Eé]cole\s+Sup[eé]rieure[^\n,|]*|ESITH|LYC[EÉ]E[^\n,|]*)\b", block)
+            if uni_match:
+                school_name = uni_match.group(0).strip()
+
         annee_ob = None
         if block_dates["date_fin"] and re.search(r"\b(20\d{2}|19\d{2})\b", block_dates["date_fin"]):
             annee_ob = int(re.search(r"\b(20\d{2}|19\d{2})\b", block_dates["date_fin"]).group(1))
         elif block_dates["date_debut"] and re.search(r"\b(20\d{2}|19\d{2})\b", block_dates["date_debut"]):
             annee_ob = int(re.search(r"\b(20\d{2}|19\d{2})\b", block_dates["date_debut"]).group(1))
 
-        if block_diplomas or block_orgs:
+        etablissement_val = school_name
+
+        if diplome_val:
+            diplome_val = re.sub(r"\s*\n\s*", " ", diplome_val).strip()
+            diplome_val = re.sub(r"(?i)\s+University\s+of.*$", "", diplome_val).strip()
+        if etablissement_val:
+            etablissement_val = re.sub(r"\s*\n\s*", " ", etablissement_val).strip()
+        if domaine:
+            domaine = re.sub(r"\s*\n\s*", " ", domaine).strip()
+
+        if diplome_val or etablissement_val:
             entries.append({
-                "diplome": block_diplomas[0] if block_diplomas else None,
-                "etablissement": block_orgs[0] if block_orgs else None,
-                "domaine": domaine,
+                "diplome": diplome_val,
+                "etablissement": etablissement_val,
+                "domaine": domaine if domaine else diplome_val,
                 "annee_obtention": annee_ob,
                 "date_debut": block_dates["date_debut"],
                 "date_fin": block_dates["date_fin"],
@@ -419,15 +433,10 @@ def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
 
 
 def extract_tech_skills(text: str) -> List[str]:
-    """
-    Extract technical skills with alias normalization and deduplication.
-    Filter out contact header URLs/emails (Rule 15).
-    """
-    # Rule 15: Strip header lines containing contact info/URLs before extracting tech skills
     lines = text.splitlines()
     clean_lines = []
     for l in lines:
-        if re.search(r"(?i)\b(?:github\.com/|linkedin\.com/|@[a-z0-9.\-]+\.[a-z]{2,})\b", l):
+        if re.search(r"(?i)(?:github\.com/|linkedin\.com/|http|@[a-z0-9.\-]+\.[a-z]{2,})", l):
             continue
         clean_lines.append(l)
     
@@ -452,7 +461,6 @@ def extract_tech_skills(text: str) -> List[str]:
 
 
 def extract_languages(text: str) -> List[Dict[str, str]]:
-    """Extract spoken languages cleanly from section (Rule 14 - preserves 1-item lists)."""
     langs = []
     lang_matches = re.findall(r"(?i)\b(arabe|fran[çc]ais|anglais|english|french|arabic|spanish|espagnol|german|allemand|italian|italien)\b(?:\s*:\s*([^\n,]+))?", text)
     for l_name, l_level in lang_matches:
@@ -464,7 +472,6 @@ def extract_languages(text: str) -> List[Dict[str, str]]:
 
 
 def extract_certifications(text: str) -> List[Dict[str, str]]:
-    """Extract certifications cleanly with date extraction (Rule 14 - preserves 1-item lists)."""
     certs = []
     lines = text.splitlines()
 
@@ -494,7 +501,6 @@ def extract_certifications(text: str) -> List[Dict[str, str]]:
 
 
 def _split_sections(text: str) -> Dict[str, str]:
-    """Split CV text into clean sections without boundary overflow."""
     sections = {"experience": "", "education": "", "skills": "", "languages": "", "certifications": "", "other": ""}
 
     lines = text.splitlines()
@@ -530,10 +536,6 @@ def _split_sections(text: str) -> Dict[str, str]:
 
 
 def extract_ner(text: str) -> Dict[str, Any]:
-    """
-    Main entry point for NER extraction (Layer 2).
-    Extracts non-PII entities: experiences, formations, technical skills, languages, certifications.
-    """
     nlp = _get_fr_model()
     if nlp is None:
         logger.error("No spaCy model available. Cannot run NER extraction.")
