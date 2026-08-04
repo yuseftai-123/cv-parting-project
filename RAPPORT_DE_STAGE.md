@@ -23,7 +23,7 @@ Filière           : Diplôme Universitaire de Technologie (DUT)
 Établissement     : EST Meknès — Université Moulay Ismaïl
 Entreprise d'Accueil: Kinova Tech (https://kinovatech.com) — Dépt. IA & IT
 Modalité du Stage : À Distance / Remote (Télétravail)
-Encadrant Entreprise: Responsable Dépt. IA (Kinova Tech)
+Encadrant Entreprise: Prof. A. ABOULFARAJ (Responsable Dépt. IA - Kinova Tech)
 Encadrant Pédagogique: Prof. A. ABOULFARAJ (EST Meknès)
 Année Universitaire: 2025 / 2026
 ================================================================================
@@ -52,7 +52,7 @@ Avant d'entamer la description détaillée des travaux réalisés durant mon sta
 
 Je tiens à exprimer ma gratitude la plus vive à mon encadrant pédagogique à l'EST Meknès, **Monsieur le Professeur A. ABOULFARAJ**, pour son soutien précieux, ses conseils méthodologiques éclairés, sa rigueur et sa grande disponibilité lors de nos échanges à distance.
 
-Mes remerciements les plus chaleureux vont également à l'entreprise d'accueil **Kinova Tech** (`https://kinovatech.com`), et tout particulièrement au **Responsable du Département IA**, pour m'avoir accueilli au sein de ses équipes techniques en modalité à distance (télétravail), pour la confiance accordée lors des points quotidiens et pour la qualité du sujet proposé.
+Mes remerciements les plus chaleureux vont également à l'entreprise d'accueil **Kinova Tech** (`https://kinovatech.com`), et tout particulièrement à mon encadrant professionnel **Monsieur le Professeur A. ABOULFARAJ**, Responsable du Département IA, pour m'avoir accueilli au sein des équipes R&D en modalité à distance (télétravail), pour la confiance accordée lors des points quotidiens et pour la qualité du sujet proposé.
 
 Enfin, j'adresse mes remerciements à toutes les personnes qui ont contribué de près ou de loin à la réussite de ce travail d'ingénierie logicielle.
 
@@ -88,6 +88,7 @@ L'**École Supérieure de Technologie de Meknès (ESTM)**, rattachée à l'**Uni
   3. **Infrastructures & Réseaux Informatiques** : Conception, optimisation et sécurisation des réseaux d'entreprise.
 - **Vision Institutionnelle** : Transformer l'Intelligence Artificielle en levier de souveraineté et de performance durable, en alliant sécurité des données, gouvernance éthique et valorisation de l'expertise humaine.
 - **Modalité du Stage** : Stage à Distance / Remote (Télétravail)
+- **Encadrant Entreprise** : Prof. A. ABOULFARAJ (Responsable Dépt. IA - Kinova Tech)
 - **Encadrant Pédagogique** : Prof. A. ABOULFARAJ (EST Meknès)
 - **Rédacteur du Cahier de Spécifications** : Responsable Dépt. IA - Kinova Tech
 - **Objectif du Projet** : Automatiser l'extraction et l'analyse des candidatures RH (PDF, DOCX, ZIP) pour les cabinets de recrutement, avec anonymisation stricte PII (Loi 09-08 CNDP).
@@ -192,6 +193,7 @@ Le moteur **KINOVATECH CV Parser** livre des performances élevées (temps de tr
 Titre   : Application de Parsing Intelligent de CVs, Anonymisation PII & Dashboard
 Élève   : YOUSSEF TAICHA
 Filière : Génie Informatique — EST Meknès (Université Moulay Ismaïl)
+Encadrant Entreprise: Prof. A. ABOULFARAJ (Responsable Dépt. IA - Kinova Tech)
 Encadrant Pédagogique: Prof. A. ABOULFARAJ (EST Meknès)
 Entreprise: Kinova Tech (https://kinovatech.com) — Dépt. IA & Direction IT
 Modalité: Stage à Distance / Remote (Télétravail)
