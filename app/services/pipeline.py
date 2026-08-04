@@ -1,12 +1,13 @@
 """
-Pipeline Orchestrator Service
+Pipeline Orchestrator Service (v2)
 Executes the full 8-stage CV parsing pipeline with structured logging at each stage.
+Includes Interval Union date calculation for total experience years (Rule 17).
 """
 import time
 import uuid
 import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple
 
 from sqlalchemy.orm import Session
 
@@ -14,7 +15,7 @@ from app.services.extractor import extract_text
 from app.services.language_detector import detect_language
 from app.services.pii_detector import detect_pii
 from app.services.pii_masker import mask_pii
-from app.services.ner_extractor import extract_ner
+from app.services.ner_extractor import extract_ner, parse_date_to_month_year
 from app.services.llm_enrichment import generate_profile_summary
 from app.schemas.cv import (
     CVStructuredResponse,
@@ -35,6 +36,54 @@ from app.models.candidate import ParsedCVRecord
 # Configure structured logging
 logger = logging.getLogger("cv_pipeline")
 logger.setLevel(logging.INFO)
+
+
+def calculate_total_experience_years_union(experiences: List[Dict[str, Any]]) -> float:
+    """
+    Calculate total years of experience using Interval Union (Rule 17).
+    Merges overlapping date ranges so concurrent roles are not double-counted.
+    """
+    intervals: List[Tuple[int, int]] = []
+
+    for exp in experiences:
+        d_debut = exp.get("date_debut")
+        d_fin = exp.get("date_fin")
+        if not d_debut:
+            continue
+
+        try:
+            y_start, m_start = parse_date_to_month_year(d_debut)
+            y_end, m_end = parse_date_to_month_year(d_fin) if d_fin else (datetime.now().year, datetime.now().month)
+
+            start_month_abs = y_start * 12 + m_start
+            end_month_abs = y_end * 12 + m_end
+
+            if end_month_abs >= start_month_abs:
+                intervals.append((start_month_abs, end_month_abs))
+        except Exception:
+            continue
+
+    if not intervals:
+        return 0.0
+
+    # Sort intervals by start month
+    intervals.sort(key=lambda x: x[0])
+
+    # Merge overlapping intervals
+    merged: List[Tuple[int, int]] = []
+    current_start, current_end = intervals[0]
+
+    for start, end in intervals[1:]:
+        if start <= current_end + 1:  # Overlapping or adjacent
+            current_end = max(current_end, end)
+        else:
+            merged.append((current_start, current_end))
+            current_start, current_end = start, end
+    merged.append((current_start, current_end))
+
+    # Sum total distinct months across merged union intervals
+    total_distinct_months = sum((end - start + 1) for start, end in merged)
+    return round(total_distinct_months / 12.0, 1)
 
 
 def process_cv_pipeline(
@@ -79,11 +128,12 @@ def process_cv_pipeline(
     # Stage 5: NER Entity Extraction
     logger.info(f"[STAGE 5] Running spaCy NER & section extraction...")
     ner_data = extract_ner(masked_text)
-    exp_count = len(ner_data.get("experiences", []))
+    raw_experiences = ner_data.get("experiences", [])
+    exp_count = len(raw_experiences)
     form_count = len(ner_data.get("formations", []))
     logger.info(f"[STAGE 5 COMPLETED] NER extracted {exp_count} experiences and {form_count} formations")
 
-    # Stage 6: LLM Profile Summary Generation
+    # Stage 6: LLM Profile Summary Generation (Rule 10: Anti-contamination)
     logger.info(f"[STAGE 6] Generating LLM profile summary with pre-dispatch security assertion gate")
     summary = generate_profile_summary(masked_text, pii_data)
     logger.info(f"[STAGE 6 COMPLETED] Generated profile summary ({len(summary)} chars)")
@@ -102,22 +152,21 @@ def process_cv_pipeline(
         linkedin_github=PIIFieldItem(**pii_data.get("linkedin_github", {}))
     )
 
-    # Build Experiences list & sum duration in months
+    # Build Experiences list
     experiences_list = []
-    total_months = 0
-    for exp in ner_data.get("experiences", []):
-        dur = exp.get("duree_mois")
-        if dur:
-            total_months += dur
+    for exp in raw_experiences:
         experiences_list.append(ExperienceEntry(
             entreprise=exp.get("entreprise"),
             poste=exp.get("poste"),
             date_debut=exp.get("date_debut"),
             date_fin=exp.get("date_fin"),
-            duree_mois=dur,
+            duree_mois=exp.get("duree_mois"),
             description_masquee=exp.get("description"),
             soft_skills_inferes=[]
         ))
+
+    # Calculate total experience years using Interval Union (Rule 17)
+    total_years = calculate_total_experience_years_union(raw_experiences)
 
     # Build Formations list
     formations_list = []
@@ -158,8 +207,6 @@ def process_cv_pipeline(
         certifications=cert_objs
     )
 
-    # Determine total experience years (float rounded to 1 decimal place, e.g. 2.0 or 1.9)
-    total_years = round(total_months / 12.0, 1) if total_months > 0 else 0.0
     first_title = experiences_list[0].poste if experiences_list else None
     
     secteur = "Informatique & Data"
@@ -167,9 +214,9 @@ def process_cv_pipeline(
         title_lower = first_title.lower()
         if "data" in title_lower or "ingénieure data" in title_lower:
             secteur = "Informatique & Ingénierie Data"
-        elif "développeur" in title_lower or "logiciel" in title_lower:
+        elif "développeur" in title_lower or "logiciel" in title_lower or "backend" in title_lower or "engineer" in title_lower:
             secteur = "Développement Logiciel & IT"
-        elif "chef de projet" in title_lower:
+        elif "chef de projet" in title_lower or "manager" in title_lower:
             secteur = "Management de Projets IT"
 
     profil_obj = Profil(
