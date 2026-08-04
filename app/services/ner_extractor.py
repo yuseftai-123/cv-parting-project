@@ -1,7 +1,6 @@
 """
 NER Extractor Service (Layer 2) - Non-PII Entity Extraction
-Uses spaCy fr_core_news_lg for ORG/DATE entities and regex patterns for job titles & diplomas.
-Enhanced Section Splitting & Blacklist Filtering.
+Robust line-by-line section parser for Experiences, Education, Tech Skills, Languages, Certifications.
 """
 import re
 import logging
@@ -9,9 +8,7 @@ from typing import List, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# spaCy model loading (singleton)
-# ---------------------------------------------------------------------------
+# Singleton spaCy models
 _nlp_fr = None
 _nlp_en = None
 
@@ -25,90 +22,37 @@ def _get_fr_model():
             _nlp_fr = spacy.load("fr_core_news_lg")
             logger.info("Loaded spaCy model: fr_core_news_lg")
         except OSError:
-            logger.warning(
-                "fr_core_news_lg not installed. Run: python -m spacy download fr_core_news_lg"
-            )
+            logger.warning("fr_core_news_lg not installed.")
             _nlp_fr = None
     return _nlp_fr
 
 
-def _get_en_model():
-    """Lazy-load spaCy English model (en_core_web_sm) as optional fallback."""
-    global _nlp_en
-    if _nlp_en is None:
-        try:
-            import spacy
-            _nlp_en = spacy.load("en_core_web_sm")
-            logger.info("Loaded spaCy model: en_core_web_sm")
-        except OSError:
-            logger.info("en_core_web_sm not available; using fr model for English text")
-            _nlp_en = False  # sentinel
-    return _nlp_en if _nlp_en is not False else None
-
-
-# ---------------------------------------------------------------------------
-# Blacklist for falsely recognized company names (ORG)
-# ---------------------------------------------------------------------------
 ORG_BLACKLIST = {
     "SOFT", "SOFT SKILLS", "SKILLS", "ACTIVITÉS", "PARASCOLAIRES", "PORTFOLIO",
     "ACADEMIQUES", "ACADÉMIQUES", "CLUB", "HUMANITAIRE", "COMPÉTENCES", "COMPETENCES",
     "LANGUES", "HOBBIES", "INTERETS", "INTÉRÊTS", "FORMATION", "FORMATIONS",
-    "DIPLÔMES", "DIPLOMES", "PROJETS", "EXPERIENCES", "EXPÉRIENCES"
+    "DIPLÔMES", "DIPLOMES", "PROJETS", "EXPERIENCES", "EXPÉRIENCES", "MANAGEMENT DES SYSTÈMES",
+    "INFORMATIQUE ET MANAGEMENT"
 }
 
-
-# ---------------------------------------------------------------------------
-# Section-splitting keywords
-# ---------------------------------------------------------------------------
-EXPERIENCE_HEADERS = re.compile(
-    r"(?i)^(?:exp[eé]riences?\s*professionnelles?|work\s+experience|professional\s+experience"
-    r"|employment\s+history|parcours\s+professionnel|exp[eé]riences?)",
-    re.MULTILINE,
-)
-
-EDUCATION_HEADERS = re.compile(
-    r"(?i)^(?:formations?|[eé]ducation|education|academic\s+background"
-    r"|dipl[oô]mes?|qualifications?|parcours\s+acad[eé]mique|activit[eé]s?\s+parascolaires?|[eé]tudes)",
-    re.MULTILINE,
-)
-
-SKILLS_HEADERS = re.compile(
-    r"(?i)^(?:comp[eé]tences?|skills|soft\s+skills|hard\s+skills|savoir-faire|langues|languages)",
-    re.MULTILINE,
-)
-
-ANY_SECTION_HEADER = re.compile(
-    r"(?i)^(?:exp[eé]riences?\s*professionnelles?|work\s+experience|professional\s+experience"
-    r"|employment\s+history|parcours\s+professionnel|exp[eé]riences?"
-    r"|formations?|[eé]ducation|education|academic\s+background"
-    r"|dipl[oô]mes?|qualifications?|parcours\s+acad[eé]mique|activit[eé]s?\s+parascolaires?|[eé]tudes"
-    r"|comp[eé]tences?|skills|soft\s+skills|hard\s+skills|savoir-faire|langues|languages|centres?\s+d.int[eé]r[eê]t"
-    r"|hobbies|loisirs|projets?|projects?|portfolio|portfolio\s+acad[eé]miques?|certifications?"
-    r"|r[eé]f[eé]rences?|references|profil|profile|summary|objectif)",
-    re.MULTILINE,
-)
-
-# ---------------------------------------------------------------------------
-# Job title patterns
-# ---------------------------------------------------------------------------
 APOS = "['\u2019]"
 
 JOB_TITLE_PATTERNS = re.compile(
     r"(?i)\b("
-    r"ing[eé]nieur(?:\s+(?:d" + APOS + r"?[eé]tat|en|informatique|logiciel|r[eé]seaux|civil|industriel))?"
-    r"|d[eé]veloppeur(?:\s+(?:web|full\s*stack|front[\s-]*end|back[\s-]*end|mobile|java|python|\.net))?"
+    r"ing[eé]nieur(?:e)?(?:\s+(?:d" + APOS + r"?[eé]tat|en|informatique|logiciel|r[eé]seaux|civil|industriel|data|junior|senior))?"
+    r"|d[eé]veloppeur(?:se)?(?:\s+(?:web|full\s*stack|front[\s-]*end|back[\s-]*end|mobile|java|python|\.net))?"
     r"|chef\s+de\s+(?:projet|produit|d[eé]partement)"
     r"|responsable\s+(?:technique|informatique|qualit[eé]|commercial|rh|marketing|de\s+l" + APOS + r"?infographie)"
-    r"|directeur(?:\s+(?:technique|g[eé]n[eé]ral|commercial|financier|artistique))?"
-    r"|technicien(?:\s+(?:sup[eé]rieur|informatique|r[eé]seaux|maintenance))?"
-    r"|consultant(?:\s+(?:fonctionnel|technique|s[eé]nior|junior|it|sap|bi))?"
+    r"|directeur(?:trice)?(?:\s+(?:technique|g[eé]n[eé]ral|commercial|financier|artistique))?"
+    r"|technicien(?:ne)?(?:\s+(?:sup[eé]rieur|informatique|r[eé]seaux|maintenance))?"
+    r"|consultant(?:e)?(?:\s+(?:fonctionnel|technique|s[eé]nior|junior|it|sap|bi))?"
     r"|analyste(?:\s+(?:programmeur|fonctionnel|de\s+donn[eé]es|financier|business))?"
-    r"|administrateur(?:\s+(?:syst[èe]me|base\s+de\s+donn[eé]es|r[eé]seaux?))?"
+    r"|administrateur(?:trice)?(?:\s+(?:syst[èe]me|base\s+de\s+donn[eé]es|r[eé]seaux?))?"
     r"|comptable|auditeur|juriste|avoca?t"
-    r"|vice[\s-]*pr[eé]sident|pr[eé]sident"
+    r"|vice[\s-]*pr[eé]sident(?:e)?|pr[eé]sident(?:e)?"
     r"|gestionnaire(?:\s+de\s+(?:stock|paie|projet))?"
-    r"|assistant(?:e)?(?:\s+(?:de\s+direction|administratif|commercial|rh))?"
-    r"|stagiaire(?:\s+(?:en|p[eé]dagogique))?"
+    r"|assistant(?:e)?(?:\s+(?:de\s+direction|administratif|commercial|rh|chef\s+de\s+projet))?"
+    r"|stagiaire(?:\s+(?:en|p[eé]dagogique|ing[eé]nieur|logiciel))?"
     r"|architecte(?:\s+(?:logiciel|solution|cloud|si))?"
     r"|software\s+engineer(?:\s+(?:senior|junior|lead|principal))?"
     r"|(?:senior|junior|lead|principal|staff)\s+(?:software\s+)?engineer"
@@ -124,38 +68,51 @@ JOB_TITLE_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
-# ---------------------------------------------------------------------------
-# Diploma / degree patterns
-# ---------------------------------------------------------------------------
 DIPLOMA_PATTERNS = re.compile(
     r"(?i)\b("
     r"baccalaur[eé]at|bac(?:\s*\+\s*\d)?"
     r"|licence(?:\s+professionnelle)?|master(?:\s+(?:sp[eé]cialis[eé]|recherche|professionnel))?"
     r"|doctorat|th[èe]se"
     r"|cycle\s+ing[eé]nieur(?:\s+d" + APOS + r"?[eé]tat)?"
+    r"|classes\s+pr[eé]paratoires(?:\s+aux\s+grandes\s+[eé]coles)?"
     r"|dipl[oô]me\s+(?:d" + APOS + r"?ing[eé]nieur|d" + APOS + r"?[eé]tat|universitaire)"
-    r"|dut|deug|deust|bts|cpge"
+    r"|dut|deug|deust|bts|cpge|fili[èe]re\s+mp"
     r"|ing[eé]nieur\s+d" + APOS + r"?[eé]tat"
     r"|bachelor(?:" + APOS + r"?s)?(?:\s+(?:of\s+(?:science|arts|engineering)))?"
     r"|b\.?sc?\.?|b\.?a\.?|b\.?eng\.?"
     r"|master(?:" + APOS + r"?s)?(?:\s+(?:of\s+(?:science|arts|engineering|business)))?"
     r"|m\.?sc?\.?|m\.?a\.?|m\.?eng\.?|mba"
     r"|ph\.?d\.?|doctorate"
-    r"|associate(?:" + APOS + r"?s)?\s+degree"
     r"|certificate|certification|diploma"
     r")\b",
     re.IGNORECASE,
 )
 
-# ---------------------------------------------------------------------------
-# Known Tech Stack Regex Extractor
-# ---------------------------------------------------------------------------
+SCHOOL_KEYWORDS = re.compile(
+    r"(?i)\b("
+    r"[eé]cole\s+sup[eé]rieure[^\n,|]*"
+    r"|lyc[eé]e[^\n,|]*"
+    r"|universit[eé][^\n,|]*"
+    r"|facult[eé][^\n,|]*"
+    r"|institut[^\n,|]*"
+    r"|esith[^\n,|]*"
+    r"|encg[^\n,|]*"
+    r"|ensam[^\n,|]*"
+    r"|ehtp[^\n,|]*"
+    r"|emi[^\n,|]*"
+    r"|enias[^\n,|]*"
+    r"|cpge[^\n,|]*"
+    r")\b",
+    re.IGNORECASE,
+)
+
 TECH_SKILLS_PATTERNS = re.compile(
     r"(?i)\b("
     r"html5?|css3?|javascript|js|typescript|ts|python|java|c\+\+|c#|php|ruby|go|golang|rust|swift|kotlin"
     r"|react(?:\.js)?|vue(?:\.js)?|angular|node(?:\.js)?|express|fastapi|flask|django|spring\s+boot"
     r"|postgresql|postgres|mysql|sqlite|mongodb|redis|oracle|sql"
-    r"|docker|kubernetes|aws|azure|gcp|git|github|gitlab|ci/cd"
+    r"|pandas|airflow|power\s+bi|tableau|excel(?:\s+avanc[eé])?|jira"
+    r"|docker|kubernetes|aws|azure|gcp|git|github|gitlab|gitlab\s+ci|ci/cd"
     r"|adobe\s+xd|figma|photoshop|illustrator|canva"
     r"|spacy|nltk|transformers|scikit-learn|tensorflow|pytorch|opencv"
     r")\b",
@@ -200,38 +157,62 @@ def _extract_date_range(text: str) -> Dict[str, Optional[str]]:
     return result
 
 
-def _split_sections(text: str) -> Dict[str, str]:
-    """
-    Split CV text into sections based on heading keywords.
-    Returns dict with keys: 'experience', 'education', 'skills', 'other'.
-    """
-    sections = {"experience": "", "education": "", "skills": "", "other": ""}
+def _split_into_experience_blocks(text: str) -> List[str]:
+    """Split experience text into individual job blocks by job title or date headers."""
+    lines = text.splitlines()
+    blocks = []
+    current_block = []
 
-    all_headers = list(ANY_SECTION_HEADER.finditer(text))
+    for line in lines:
+        line_str = line.strip()
+        if not line_str:
+            continue
 
-    if not all_headers:
-        sections["other"] = text
-        return sections
+        # Check if line indicates a new job entry (job title or company separator)
+        is_new_entry = (
+            JOB_TITLE_PATTERNS.search(line_str) or
+            ("—" in line_str or " - " in line_str or "|" in line_str) and DATE_RANGE_PATTERN.search(line_str)
+        )
 
-    if all_headers[0].start() > 0:
-        sections["other"] = text[: all_headers[0].start()]
-
-    for i, match in enumerate(all_headers):
-        start = match.end()
-        end = all_headers[i + 1].start() if i + 1 < len(all_headers) else len(text)
-        section_text = text[start:end].strip()
-        header_text = match.group(0).strip()
-
-        if EXPERIENCE_HEADERS.match(header_text):
-            sections["experience"] += "\n" + section_text
-        elif EDUCATION_HEADERS.match(header_text):
-            sections["education"] += "\n" + section_text
-        elif SKILLS_HEADERS.match(header_text):
-            sections["skills"] += "\n" + section_text
+        if is_new_entry and current_block:
+            blocks.append("\n".join(current_block))
+            current_block = [line_str]
         else:
-            sections["other"] += "\n" + section_text
+            current_block.append(line_str)
 
-    return sections
+    if current_block:
+        blocks.append("\n".join(current_block))
+
+    return blocks
+
+
+def _split_into_education_blocks(text: str) -> List[str]:
+    """Split education text into individual formation blocks."""
+    lines = text.splitlines()
+    blocks = []
+    current_block = []
+
+    for line in lines:
+        line_str = line.strip()
+        if not line_str:
+            continue
+
+        is_new_entry = (
+            DIPLOMA_PATTERNS.search(line_str) or
+            DATE_RANGE_PATTERN.search(line_str) or
+            SCHOOL_KEYWORDS.search(line_str)
+        )
+
+        if is_new_entry and current_block:
+            blocks.append("\n".join(current_block))
+            current_block = [line_str]
+        else:
+            current_block.append(line_str)
+
+    if current_block:
+        blocks.append("\n".join(current_block))
+
+    return blocks
 
 
 def _filter_orgs(org_list: List[str]) -> List[str]:
@@ -245,28 +226,35 @@ def _filter_orgs(org_list: List[str]) -> List[str]:
 
 
 def _extract_experience_entries(text: str, nlp) -> List[Dict[str, Any]]:
-    """
-    Extract experience entries from a text block.
-    Uses spaCy for ORG detection (filtered), regex for job titles and dates.
-    """
+    """Extract structured job experience entries."""
     if not text.strip():
         return []
 
     entries = []
-    blocks = re.split(r"\n\s*\n", text)
-    blocks = [b.strip() for b in blocks if b.strip()]
+    blocks = _split_into_experience_blocks(text)
 
     for block in blocks:
-        if len(block) < 10:
+        if len(block) < 8:
             continue
 
-        # Skip block if it is purely education/formation
-        if re.search(r"(?i)\b(?:cycle\s+ing[eé]nieur|dipl[oô]me|baccalaur[eé]at|licence|master|dut|bts)\b", block):
+        # Skip block if it is purely education/formation or soft skills
+        if re.search(r"(?i)\b(?:cycle\s+ing[eé]nieur|dipl[oô]me|baccalaur[eé]at|licence|master|dut|bts|soft\s+skills)\b", block):
             continue
 
         block_doc = nlp(block[:10000])
         raw_orgs = [ent.text.strip() for ent in block_doc.ents if ent.label_ == "ORG"]
         block_orgs = _filter_orgs(raw_orgs)
+
+        # Fallback regex for company name after dash (e.g. Ingénieure Data — Atlas Digital Solutions)
+        if not block_orgs:
+            company_dash = re.search(r"[—\-]\s*([A-Z][A-Za-z0-9\s&]+)", block)
+            if company_dash:
+                c_name = company_dash.group(1).strip()
+                # Remove trailing parenthetical dates like (Mars 2025)
+                c_name = re.sub(r"\(.*?\)", "", c_name).strip()
+                if c_name and c_name.upper() not in ORG_BLACKLIST:
+                    block_orgs.append(c_name)
+
         block_titles = [m.group(0).strip() for m in JOB_TITLE_PATTERNS.finditer(block)]
         block_dates = _extract_date_range(block)
 
@@ -276,31 +264,35 @@ def _extract_experience_entries(text: str, nlp) -> List[Dict[str, Any]]:
                 "entreprise": block_orgs[0] if block_orgs else None,
                 "date_debut": block_dates["date_debut"],
                 "date_fin": block_dates["date_fin"],
-                "description": block[:200].strip(),
+                "description": block[:300].strip(),
             })
 
     return entries
 
 
 def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
-    """
-    Extract education/formation entries from a text block.
-    Uses spaCy for ORG (school names), regex for diploma keywords and dates.
-    """
+    """Extract structured education entries."""
     if not text.strip():
         return []
 
     entries = []
-    blocks = re.split(r"\n\s*\n", text)
-    blocks = [b.strip() for b in blocks if b.strip()]
+    blocks = _split_into_education_blocks(text)
 
     for block in blocks:
-        if len(block) < 10:
+        if len(block) < 8:
             continue
 
         block_doc = nlp(block[:10000])
         raw_orgs = [ent.text.strip() for ent in block_doc.ents if ent.label_ == "ORG"]
         block_orgs = _filter_orgs(raw_orgs)
+
+        # School Regex Matcher Fallback
+        school_match = SCHOOL_KEYWORDS.search(block)
+        if school_match:
+            school_name = school_match.group(0).strip()
+            if not block_orgs or len(school_name) > len(block_orgs[0]):
+                block_orgs = [school_name]
+
         block_diplomas = [m.group(0).strip() for m in DIPLOMA_PATTERNS.finditer(block)]
         block_dates = _extract_date_range(block)
 
@@ -310,7 +302,7 @@ def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
                 "etablissement": block_orgs[0] if block_orgs else None,
                 "date_debut": block_dates["date_debut"],
                 "date_fin": block_dates["date_fin"],
-                "description": block[:200].strip(),
+                "description": block[:300].strip(),
             })
 
     return entries
@@ -319,7 +311,6 @@ def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
 def extract_tech_skills(text: str) -> List[str]:
     """Extract technical skills found anywhere in the CV text."""
     matches = TECH_SKILLS_PATTERNS.findall(text)
-    # Deduplicate while preserving order and proper capitalization
     unique_skills = []
     seen = set()
     for m in matches:
@@ -331,15 +322,75 @@ def extract_tech_skills(text: str) -> List[str]:
     return unique_skills
 
 
+def extract_languages(text: str) -> List[Dict[str, str]]:
+    """Extract spoken languages from text."""
+    langs = []
+    lang_matches = re.findall(r"(?i)\b(arabe|fran[çc]ais|anglais|espagnol|allemand|italien)\b(?:\s*:\s*([^\n,]+))?", text)
+    for l_name, l_level in lang_matches:
+        langs.append({
+            "langue": l_name.capitalize(),
+            "niveau": l_level.strip() if l_level else "Professionnel"
+        })
+    return langs
+
+
+def extract_certifications(text: str) -> List[Dict[str, str]]:
+    """Extract certifications from text."""
+    certs = []
+    cert_matches = re.findall(r"(?i)\b([A-Za-z0-9\s\-\(\)]+Certificate[^\n]*|[A-Za-z0-9\s\-\(\)]+Certification[^\n]*)", text)
+    for c in cert_matches:
+        certs.append({
+            "label": c.strip(),
+            "date": None
+        })
+    return certs
+
+
+def _split_sections(text: str) -> Dict[str, str]:
+    """Split CV text into sections based on heading keywords."""
+    sections = {"experience": "", "education": "", "skills": "", "languages": "", "certifications": "", "other": ""}
+
+    lines = text.splitlines()
+    current_sec = "other"
+
+    for line in lines:
+        l = line.strip()
+        if not l:
+            continue
+        
+        if re.search(r"(?i)^(?:exp[eé]riences?\s*professionnelles?|work\s+experience|professional\s+experience)", l):
+            current_sec = "experience"
+            continue
+        elif re.search(r"(?i)^(?:formations?|[eé]ducation|academic\s+background|dipl[oô]mes?)", l):
+            current_sec = "education"
+            continue
+        elif re.search(r"(?i)^(?:comp[eé]tences?\s*techniques?|skills|technologies)", l):
+            current_sec = "skills"
+            continue
+        elif re.search(r"(?i)^(?:langues|languages)", l):
+            current_sec = "languages"
+            continue
+        elif re.search(r"(?i)^(?:certifications?|certificates?)", l):
+            current_sec = "certifications"
+            continue
+        elif re.search(r"(?i)^(?:soft\s+skills|portfolio|activit[eé]s?\s+parascolaires?| centres?\s+d.int[eé]r[eê]t)", l):
+            current_sec = "other"
+            continue
+
+        sections[current_sec] += "\n" + l
+
+    return sections
+
+
 def extract_ner(text: str) -> Dict[str, Any]:
     """
     Main entry point for NER extraction (Layer 2).
-    Extracts non-PII entities: experiences, formations, and technical skills.
+    Extracts non-PII entities: experiences, formations, technical skills, languages, certifications.
     """
     nlp = _get_fr_model()
     if nlp is None:
         logger.error("No spaCy model available. Cannot run NER extraction.")
-        return {"experiences": [], "formations": [], "competences": {"techniques": []}}
+        return {"experiences": [], "formations": [], "competences": {"techniques": [], "langues": [], "certifications": []}}
 
     # 1. Split text into sections
     sections = _split_sections(text)
@@ -348,22 +399,23 @@ def extract_ner(text: str) -> Dict[str, Any]:
     experiences = _extract_experience_entries(sections["experience"], nlp)
     formations = _extract_education_entries(sections["education"], nlp)
 
-    # 3. If section splitting missed entries, scan 'other' section
-    if not formations and sections["other"].strip():
-        formations = _extract_education_entries(sections["other"], nlp)
+    # Fallbacks if sections were not cleanly demarcated
+    if not experiences:
+        experiences = _extract_experience_entries(text, nlp)
+    if not formations:
+        formations = _extract_education_entries(text, nlp)
 
-    if not experiences and sections["other"].strip():
-        experiences = _extract_experience_entries(sections["other"], nlp)
-
-    # 4. Extract tech skills from entire CV text
+    # 3. Extract tech skills, languages, and certifications
     tech_skills = extract_tech_skills(text)
+    languages = extract_languages(text)
+    certifications = extract_certifications(text)
 
     return {
         "experiences": experiences,
         "formations": formations,
         "competences": {
             "techniques": tech_skills,
-            "langues": [],
-            "certifications": []
+            "langues": languages,
+            "certifications": certifications
         }
     }

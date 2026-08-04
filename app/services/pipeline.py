@@ -23,6 +23,9 @@ from app.schemas.cv import (
     Profil,
     ExperienceEntry,
     FormationEntry,
+    CompetenceTechnique,
+    CompetenceLangue,
+    Certification,
     Competences,
     Scores,
     AuditTrail
@@ -59,23 +62,22 @@ def process_cv_pipeline(
     logger.info(f"[STAGE 1 COMPLETED] Extracted {len(raw_text)} characters, format: {source_format}")
 
     # Stage 2: Language Detection
-    logger.info(f"[STAGE 2] Detecting language for cv_id={cv_id}")
+    logger.info(f"[STAGE 2] Detecting document language...")
     language = detect_language(raw_text)
-    logger.info(f"[STAGE 2 COMPLETED] Language detected: {language}")
+    logger.info(f"[STAGE 2 COMPLETED] Detected language: {language}")
 
     # Stage 3: PII Regex Detection
-    logger.info(f"[STAGE 3] Running deterministic PII detection regex rules")
-    raw_pii_data = detect_pii(raw_text)
-    detected_count = sum(1 for f in raw_pii_data.values() if f.get("value"))
-    logger.info(f"[STAGE 3 COMPLETED] Detected {detected_count} PII fields")
+    logger.info(f"[STAGE 3] Running deterministic PII detection regex...")
+    pii_data = detect_pii(raw_text)
+    logger.info(f"[STAGE 3 COMPLETED] Detected PII fields: {list(pii_data.keys())}")
 
     # Stage 4: PII Masking
-    logger.info(f"[STAGE 4] Executing PII token masking")
-    masked_text, pii_data = mask_pii(raw_text, raw_pii_data)
-    logger.info(f"[STAGE 4 COMPLETED] Masking complete. Masked text length: {len(masked_text)} chars")
+    logger.info(f"[STAGE 4] Applying PII masking & token substitution...")
+    masked_text, pii_data = mask_pii(raw_text, pii_data)
+    logger.info(f"[STAGE 4 COMPLETED] PII text masked ({len(masked_text)} chars)")
 
     # Stage 5: NER Entity Extraction
-    logger.info(f"[STAGE 5] Extracting non-PII entities via spaCy NER layer")
+    logger.info(f"[STAGE 5] Running spaCy NER & section extraction...")
     ner_data = extract_ner(masked_text)
     exp_count = len(ner_data.get("experiences", []))
     form_count = len(ner_data.get("formations", []))
@@ -108,7 +110,7 @@ def process_cv_pipeline(
             poste=exp.get("poste"),
             date_debut=exp.get("date_debut"),
             date_fin=exp.get("date_fin"),
-            duree_mois=None,  # Unbuilt fields stay null
+            duree_mois=None,
             description_masquee=exp.get("description"),
             soft_skills_inferes=[]
         ))
@@ -123,6 +125,34 @@ def process_cv_pipeline(
             annee_obtention=None,
             niveau_rncp_equivalent=None
         ))
+
+    # Build Competences Pydantic object
+    comp_data = ner_data.get("competences", {})
+    
+    tech_objs = [
+        CompetenceTechnique(label=t, niveau=None, source="declaratif")
+        for t in comp_data.get("techniques", [])
+    ]
+    
+    lang_objs = []
+    for l in comp_data.get("langues", []):
+        if isinstance(l, dict):
+            lang_objs.append(CompetenceLangue(langue=l.get("langue", ""), niveau=l.get("niveau")))
+        else:
+            lang_objs.append(CompetenceLangue(langue=str(l), niveau=None))
+
+    cert_objs = []
+    for c in comp_data.get("certifications", []):
+        if isinstance(c, dict):
+            cert_objs.append(Certification(label=c.get("label", ""), date=c.get("date")))
+        else:
+            cert_objs.append(Certification(label=str(c), date=None))
+
+    competences_obj = Competences(
+        techniques=tech_objs,
+        langues=lang_objs,
+        certifications=cert_objs
+    )
 
     # Determine primary job title from first experience if available
     first_title = experiences_list[0].poste if experiences_list else None
@@ -147,7 +177,7 @@ def process_cv_pipeline(
         profil=profil_obj,
         experiences=experiences_list,
         formations=formations_list,
-        competences=Competences(),
+        competences=competences_obj,
         scores=Scores(completude_cv=0.85, coherence_temporelle=1.0, matching_score=None),
         audit_trail=AuditTrail(
             pipeline_version="1.0",
@@ -166,15 +196,17 @@ def process_cv_pipeline(
                 filename=original_filename,
                 source_format=source_format,
                 language=language,
-                structured_data=response_data.model_dump()
+                name_masked=pii_data.get("nom_complet", {}).get("value"),
+                email_masked=pii_data.get("email", {}).get("value"),
+                phone_masked=pii_data.get("telephone", {}).get("value"),
+                raw_json_response=response_data.model_dump(),
+                created_at=datetime.utcnow()
             )
             db.add(record)
             db.commit()
-            logger.info(f"[STAGE 8 COMPLETED] Record cv_id={cv_id} saved to database")
+            logger.info(f"[STAGE 8 COMPLETED] Successfully persisted record cv_id={cv_id}")
         except Exception as e:
-            logger.warning(f"[STAGE 8 WARNING] Could not persist to DB (offline/mock mode): {e}")
+            logger.error(f"[STAGE 8 FAILED] Failed to persist cv_id={cv_id} into DB: {str(e)}")
             db.rollback()
-    else:
-        logger.info(f"[STAGE 8 SKIPPED] No active DB session passed; skipping DB write")
 
     return response_data
