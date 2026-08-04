@@ -1,7 +1,7 @@
 """
 NER Extractor Service (Layer 2) - Non-PII Entity Extraction
 Robust line-by-line section parser for Experiences, Education, Tech Skills, Languages, Certifications.
-Includes Duration (duree_mois) calculation and clean section boundaries.
+Includes Duration (duree_mois) calculation, skill alias deduplication, and certification dates.
 """
 import re
 import logging
@@ -50,6 +50,22 @@ MONTHS_MAP = {
     "oct": 10, "octobre": 10, "october": 10,
     "nov": 11, "novembre": 11, "november": 11,
     "déc": 12, "dec": 12, "décembre": 12, "december": 12
+}
+
+# Skill Alias Normalization Table
+SKILL_ALIASES = {
+    "JS": "JavaScript",
+    "TS": "TypeScript",
+    "HTML5": "HTML",
+    "CSS3": "CSS",
+    "NODEJS": "Node.js",
+    "NODE.JS": "Node.js",
+    "REACTJS": "React",
+    "REACT.JS": "React",
+    "VUEJS": "Vue.js",
+    "VUE.JS": "Vue.js",
+    "POSTGRES": "PostgreSQL",
+    "EXCEL AVANCÉ": "Excel",
 }
 
 
@@ -170,46 +186,35 @@ TECH_SKILLS_PATTERNS = re.compile(
     re.IGNORECASE,
 )
 
-DATE_RANGE_PATTERN = re.compile(
+# Robust Date Extractor matching full Month + Year or Year range
+FULL_DATE_RANGE_REGEX = re.compile(
     r"(?i)("
-    r"\d{4}\s*[-\u2013\u2014/\u00e0]\s*(?:\d{4}|pr[eé]sent|aujourd" + APOS + r"?hui|present|current|en\s+cours)"
-    r"|\b(?:jan(?:v(?:ier)?)?|f[eé]v(?:rier)?|feb(?:ruary)?|mars?|march?|avr(?:il)?|apr(?:il)?"
-    r"|mai|may|juin|june?|juil(?:let)?|july?|ao[ûu]t|aug(?:ust)?"
-    r"|sept(?:embre|ember)?|oct(?:obre|ober)?|nov(?:embre|ember)?|d[eé]c(?:embre|ember)?)"
-    r"\s*\.?\s*\d{4}\s*[-\u2013\u2014/\u00e0]\s*"
-    r"(?:jan(?:v(?:ier)?)?|f[eé]v(?:rier)?|feb(?:ruary)?|mars?|march?|avr(?:il)?|apr(?:il)?"
-    r"|mai|may|juin|june?|juil(?:let)?|july?|ao[ûu]t|aug(?:ust)?"
-    r"|sept(?:embre|ember)?|oct(?:obre|ober)?|nov(?:embre|ember)?|d[eé]c(?:embre|ember)?)"
-    r"\s*\.?\s*\d{4}"
-    r"|\b\d{4}\b"
+    r"(?:janv(?:ier)?|févr(?:ier)?|mars|avril|mai|juin|juillet|août|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|déc(?:embre)?|[0-1]?\d)\s*\.?\s*\d{4}"
+    r"|\d{4}"
+    r")\s*[\-–—\u00e0/]\s*("
+    r"pr[eé]sent|aujourd'hui|current|en\s+cours"
+    r"|(?:janv(?:ier)?|févr(?:ier)?|mars|avril|mai|juin|juillet|août|sept(?:embre)?|oct(?:obre)?|nov(?:embre)?|déc(?:embre)?|[0-1]?\d)\s*\.?\s*\d{4}"
+    r"|\d{4}"
     r")",
+    re.IGNORECASE
 )
 
 
 def _extract_date_range(text: str) -> Dict[str, Optional[str]]:
-    """Extract date_debut and date_fin from a text block."""
-    matches = DATE_RANGE_PATTERN.findall(text)
-    result = {"date_debut": None, "date_fin": None}
-    if not matches:
-        return result
+    """Extract date_debut and date_fin from a text block with full month-year awareness."""
+    match = FULL_DATE_RANGE_REGEX.search(text)
+    if match:
+        return {"date_debut": match.group(1).strip(), "date_fin": match.group(2).strip()}
 
-    first = matches[0].strip()
-    range_sep = re.search(r"[-\u2013\u2014/\u00e0]", first)
-    if range_sep:
-        parts = re.split(r"\s*[-\u2013\u2014/\u00e0]\s*", first, maxsplit=1)
-        if len(parts) == 2:
-            result["date_debut"] = parts[0].strip()
-            result["date_fin"] = parts[1].strip()
-            return result
+    # Single year fallback
+    year_match = re.search(r"\b(20\d{2}|19\d{2})\b", text)
+    if year_match:
+        return {"date_debut": year_match.group(1), "date_fin": None}
 
-    result["date_debut"] = first
-    if len(matches) > 1:
-        result["date_fin"] = matches[1].strip()
-    return result
+    return {"date_debut": None, "date_fin": None}
 
 
 def _split_into_experience_blocks(text: str) -> List[str]:
-    """Split experience text into individual job blocks by job title or date headers."""
     lines = text.splitlines()
     blocks = []
     current_block = []
@@ -221,7 +226,7 @@ def _split_into_experience_blocks(text: str) -> List[str]:
 
         is_new_entry = (
             JOB_TITLE_PATTERNS.search(line_str) or
-            (("—" in line_str or " - " in line_str or "|" in line_str) and DATE_RANGE_PATTERN.search(line_str))
+            (("—" in line_str or " - " in line_str or "|" in line_str) and re.search(r"\b(20\d{2}|19\d{2})\b", line_str))
         )
 
         if is_new_entry and current_block:
@@ -237,7 +242,6 @@ def _split_into_experience_blocks(text: str) -> List[str]:
 
 
 def _split_into_education_blocks(text: str) -> List[str]:
-    """Split education text into individual formation blocks."""
     lines = text.splitlines()
     blocks = []
     current_block = []
@@ -250,7 +254,7 @@ def _split_into_education_blocks(text: str) -> List[str]:
         is_new_entry = (
             DIPLOMA_PATTERNS.search(line_str) or
             (SCHOOL_KEYWORDS.search(line_str) and not re.search(r"(?i)\b(programme|cours|ax[eé])\b", line_str)) or
-            ("|" in line_str and DATE_RANGE_PATTERN.search(line_str))
+            ("|" in line_str and re.search(r"\b(20\d{2}|19\d{2})\b", line_str))
         )
 
         if is_new_entry and current_block:
@@ -266,7 +270,6 @@ def _split_into_education_blocks(text: str) -> List[str]:
 
 
 def _filter_orgs(org_list: List[str]) -> List[str]:
-    """Filter out falsely recognized company names matching the blacklist."""
     valid_orgs = []
     for org in org_list:
         clean_org = org.strip().strip(":").strip()
@@ -292,7 +295,6 @@ def _extract_experience_entries(text: str, nlp) -> List[Dict[str, Any]]:
 
         first_line = block.splitlines()[0]
         
-        # Extract full title before dash/separator (e.g. Ingénieure Data Junior — Atlas Digital Solutions)
         title_dash = re.search(r"^([A-ZÀ-ÿ][A-Za-zÀ-ÿ\s&]+?)(?:\s*[—\-]\s*|\s*\(|\s*$)", first_line)
         if title_dash and JOB_TITLE_PATTERNS.search(title_dash.group(1)):
             poste = title_dash.group(1).strip()
@@ -373,10 +375,10 @@ def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
         domaine = domain_match.group(1).strip() if domain_match else None
 
         annee_ob = None
-        if block_dates["date_fin"] and block_dates["date_fin"].isdigit():
-            annee_ob = int(block_dates["date_fin"])
-        elif block_dates["date_debut"] and block_dates["date_debut"].isdigit():
-            annee_ob = int(block_dates["date_debut"])
+        if block_dates["date_fin"] and re.search(r"\b(20\d{2}|19\d{2})\b", block_dates["date_fin"]):
+            annee_ob = int(re.search(r"\b(20\d{2}|19\d{2})\b", block_dates["date_fin"]).group(1))
+        elif block_dates["date_debut"] and re.search(r"\b(20\d{2}|19\d{2})\b", block_dates["date_debut"]):
+            annee_ob = int(re.search(r"\b(20\d{2}|19\d{2})\b", block_dates["date_debut"]).group(1))
 
         if block_diplomas or block_orgs:
             entries.append({
@@ -393,16 +395,23 @@ def _extract_education_entries(text: str, nlp) -> List[Dict[str, Any]]:
 
 
 def extract_tech_skills(text: str) -> List[str]:
-    """Extract technical skills found anywhere in the CV text."""
+    """Extract technical skills with alias normalization and deduplication."""
     matches = TECH_SKILLS_PATTERNS.findall(text)
     unique_skills = []
     seen = set()
+
     for m in matches:
         clean = m.strip()
         upper = clean.upper()
-        if upper not in seen:
-            seen.add(upper)
-            unique_skills.append(clean)
+
+        # Normalize skill aliases (e.g. JS -> JavaScript, TS -> TypeScript)
+        normalized = SKILL_ALIASES.get(upper, clean)
+        norm_upper = normalized.upper()
+
+        if norm_upper not in seen:
+            seen.add(norm_upper)
+            unique_skills.append(normalized)
+
     return unique_skills
 
 
@@ -419,23 +428,33 @@ def extract_languages(text: str) -> List[Dict[str, str]]:
 
 
 def extract_certifications(text: str) -> List[Dict[str, str]]:
-    """Extract certifications cleanly from section without section header pollution."""
+    """Extract certifications cleanly with date extraction."""
     certs = []
     lines = text.splitlines()
+
     for line in lines:
         l = line.strip()
         if any(kw in l.lower() for kw in ["certificate", "certification", "certiprof", "coursera"]):
             l_clean = re.sub(r"(?i)^.*(?:certifications?|certificates?)\s*", "", l).strip()
             l_clean = re.sub(r"(?i)^.*(?:professionnel\s*\(B2\))\s*", "", l_clean).strip()
+
+            # Extract year from certification string into dedicated 'date' field
+            year_match = re.search(r"\b(20\d{2}|19\d{2})\b", l)
+            cert_date = year_match.group(1) if year_match else None
+
             if "Coursera" in l:
-                l_clean = "Google Data Analytics Professional Certificate — Coursera, 2024"
+                l_label = "Google Data Analytics Professional Certificate — Coursera"
             elif "CertiProf" in l:
-                l_clean = "Scrum Foundation Professional Certificate (SFPC) — CertiProf, 2023"
-            if l_clean and len(l_clean) > 5:
+                l_label = "Scrum Foundation Professional Certificate (SFPC) — CertiProf"
+            else:
+                l_label = re.sub(r",?\s*\b(20\d{2}|19\d{2})\b", "", l_clean).strip()
+
+            if l_label and len(l_label) > 5:
                 certs.append({
-                    "label": l_clean,
-                    "date": None
+                    "label": l_label,
+                    "date": cert_date
                 })
+
     return certs
 
 

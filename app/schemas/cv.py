@@ -24,7 +24,7 @@ class PIIFields(BaseModel):
 
 class Profil(BaseModel):
     titre_poste_actuel: Optional[str] = None
-    annees_experience_totale: Optional[int] = None
+    annees_experience_totale: Optional[float] = None
     secteur_principal: Optional[str] = None
     resume_genere_llm: Optional[str] = None
 
@@ -93,7 +93,7 @@ class CVStructuredResponse(BaseModel):
     profil: Profil = Field(default_factory=Profil)
     experiences: List[ExperienceEntry] = Field(default_factory=list)
     formations: List[FormationEntry] = Field(default_factory=list)
-    competences: Competences = Field(default_factory=list)
+    competences: Competences = Field(default_factory=Competences)
     scores: Scores = Field(default_factory=Scores)
     audit_trail: AuditTrail = Field(default_factory=AuditTrail)
 
@@ -117,9 +117,6 @@ class BatchProcessingSummary(BaseModel):
 
 
 class CVSearchRequest(BaseModel):
-    """
-    Search and Filter parameters for POST /api/v1/cvs/search (SF-10)
-    """
     skills: Optional[List[str]] = None
     min_experience: Optional[int] = None
     max_experience: Optional[int] = None
@@ -141,5 +138,3 @@ class CVSearchResultItem(BaseModel):
 class CVSearchResponse(BaseModel):
     total_results: int = 0
     results: List[CVSearchResultItem] = Field(default_factory=list)
-
-

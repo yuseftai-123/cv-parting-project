@@ -158,8 +158,8 @@ def process_cv_pipeline(
         certifications=cert_objs
     )
 
-    # Determine total experience years & primary sector
-    total_years = max(1, round(total_months / 12)) if total_months > 0 else 0
+    # Determine total experience years (float rounded to 1 decimal place, e.g. 2.0 or 1.9)
+    total_years = round(total_months / 12.0, 1) if total_months > 0 else 0.0
     first_title = experiences_list[0].poste if experiences_list else None
     
     secteur = "Informatique & Data"
