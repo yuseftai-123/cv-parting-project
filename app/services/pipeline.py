@@ -102,15 +102,19 @@ def process_cv_pipeline(
         linkedin_github=PIIFieldItem(**pii_data.get("linkedin_github", {}))
     )
 
-    # Build Experiences list
+    # Build Experiences list & sum duration in months
     experiences_list = []
+    total_months = 0
     for exp in ner_data.get("experiences", []):
+        dur = exp.get("duree_mois")
+        if dur:
+            total_months += dur
         experiences_list.append(ExperienceEntry(
             entreprise=exp.get("entreprise"),
             poste=exp.get("poste"),
             date_debut=exp.get("date_debut"),
             date_fin=exp.get("date_fin"),
-            duree_mois=None,
+            duree_mois=dur,
             description_masquee=exp.get("description"),
             soft_skills_inferes=[]
         ))
@@ -121,8 +125,8 @@ def process_cv_pipeline(
         formations_list.append(FormationEntry(
             etablissement=form.get("etablissement"),
             diplome=form.get("diplome"),
-            domaine=None,
-            annee_obtention=None,
+            domaine=form.get("domaine"),
+            annee_obtention=form.get("annee_obtention"),
             niveau_rncp_equivalent=None
         ))
 
@@ -154,13 +158,24 @@ def process_cv_pipeline(
         certifications=cert_objs
     )
 
-    # Determine primary job title from first experience if available
+    # Determine total experience years & primary sector
+    total_years = max(1, round(total_months / 12)) if total_months > 0 else 0
     first_title = experiences_list[0].poste if experiences_list else None
+    
+    secteur = "Informatique & Data"
+    if first_title:
+        title_lower = first_title.lower()
+        if "data" in title_lower or "ingénieure data" in title_lower:
+            secteur = "Informatique & Ingénierie Data"
+        elif "développeur" in title_lower or "logiciel" in title_lower:
+            secteur = "Développement Logiciel & IT"
+        elif "chef de projet" in title_lower:
+            secteur = "Management de Projets IT"
 
     profil_obj = Profil(
         titre_poste_actuel=first_title,
-        annees_experience_totale=None,
-        secteur_principal=None,
+        annees_experience_totale=total_years,
+        secteur_principal=secteur,
         resume_genere_llm=summary
     )
 

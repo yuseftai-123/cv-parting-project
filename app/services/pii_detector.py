@@ -40,11 +40,9 @@ def detect_email(text: str) -> dict:
     return {"value": None, "masked": False, "confidence": 0.0}
 
 def detect_cin(text: str) -> dict:
-    # Scan for potential CIN matches and filter out false positives
     matches = CIN_REGEX.finditer(text)
     for match in matches:
         val = match.group(0).strip()
-        # Ensure it's not a common code prefix or hex keyword
         if not re.search(r'(?i)(?:code|id|ref|ver|v)\s*:' + re.escape(val), text):
             return {"value": val, "masked": False, "confidence": 0.96}
     return {"value": None, "masked": False, "confidence": 0.0}
@@ -63,13 +61,11 @@ def detect_linkedin_github(text: str) -> dict:
     return {"value": None, "masked": False, "confidence": 0.0}
 
 def detect_address(text: str) -> dict:
-    # 1. Search for Moroccan city names
     cities_pattern = r'(?i)\b(?:' + '|'.join(re.escape(c) for c in MOROCCAN_CITIES) + r')\b'
     city_match = re.search(cities_pattern, text)
     
     if city_match:
         city_name = city_match.group(0)
-        # Search if there is a street address or 5-digit postal code near the city name
         postal_match = re.search(r'\b\d{5}\b', text)
         address_str = city_name
         if postal_match:
@@ -85,21 +81,16 @@ def detect_name(text: str) -> dict:
     if match:
         return {"value": match.group(1).strip(), "masked": False, "confidence": 0.98}
     
-    # Fallback heuristic: check first non-empty line if it looks like a person's full name
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if lines:
         first_line = lines[0]
-        # Check if first line contains 2-4 capitalized words and no special symbols
-        if re.match(r'^[A-ZÀ-ÿ][a-zà-ÿ]+\s+(?:[A-ZÀ-ÿ][a-zà-ÿ]+\s*){1,3}$', first_line):
+        # Match 2-4 capitalized or uppercase words (e.g., Salma EL AMRANI, Youssef TAICHA)
+        if re.match(r'^[A-ZÀ-ÿ][A-Za-zÀ-ÿ\'-]+\s+(?:[A-ZÀ-ÿ][A-Za-zÀ-ÿ\'-]+\s*){1,3}$', first_line):
             return {"value": first_line, "masked": False, "confidence": 0.85}
             
     return {"value": None, "masked": False, "confidence": 0.0}
 
 def detect_pii(text: str) -> dict:
-    """
-    Aggregation function: Scans raw resume text and returns structured PII fields
-    matching SF-07 output schema format.
-    """
     return {
         "nom_complet": detect_name(text),
         "email": detect_email(text),
