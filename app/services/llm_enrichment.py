@@ -42,6 +42,7 @@ class DefaultMockLLMClient:
     """
     Robust non-PII summary generator.
     Synthesizes candidate experience, education, key skills, and domain focus.
+    Uses structured header patterns for company extraction to avoid truncation artifacts.
     """
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         return self.generate_summary(user_prompt)
@@ -50,35 +51,63 @@ class DefaultMockLLMClient:
         title_match = re.search(r"(?i)\b(senior\s+backend\s+engineer|senior\s+software\s+engineer|ing[eé]nieur(?:e)?\s+data|d[eé]veloppeur(?:se)?\s+fullstack)\b", masked_text)
         title = title_match.group(0).strip().title() if title_match else "Ingénieur / Specialist"
 
-        comp_matches = re.findall(r"(?i)(?:at|chez|—|-)\s*([A-ZÀ-ÿ][A-Za-z0-9À-ÿ\s&.]+?)(?:\s*\(|\n|$)", masked_text)
-        valid_comps = [c.strip() for c in comp_matches if c.strip().upper() not in ["PRESENT", "CURRENT", "SOFT", "ACTIVITÉS"] and len(c.strip()) > 2]
-        comps_str = ", ".join(valid_comps[:3]) if valid_comps else "plusieurs entreprises de renom"
+        # Extract companies ONLY from structured "Title — Company" header lines,
+        # not from truncated description fragments (fixes mid-word truncation bug)
+        comp_matches = re.findall(
+            r"(?i)(?:engineer|developer|consultant|intern|stagiaire|ingénieur|développeur)"
+            r"\s+[—–\-]\s+([A-ZÀ-ÿ][A-Za-z0-9À-ÿ\s&.\-]+?)(?:\s*\(|\s*$)",
+            masked_text,
+            re.MULTILINE
+        )
+        valid_comps = []
+        seen_comps = set()
+        for c in comp_matches:
+            c_clean = c.strip().rstrip("—–- ")
+            c_upper = c_clean.upper()
+            if (c_upper not in seen_comps
+                    and c_upper not in {"PRESENT", "CURRENT", "SOFT", "ACTIVITÉS", ""}
+                    and len(c_clean) > 2):
+                seen_comps.add(c_upper)
+                valid_comps.append(c_clean)
+        comps_str = ", ".join(valid_comps[:4]) if valid_comps else "several notable companies"
 
-        school_match = re.search(r"(?i)\b(university\s+of\s+[a-z]+|[eé]cole\s+sup[eé]rieure[^\n,|]*|esith|manchester|leeds)\b", masked_text)
-        school = school_match.group(0).strip().title() if school_match else "établissement d'enseignement supérieur"
+        school_match = re.search(r"(?i)\b(University\s+of\s+[A-Za-z]+|[Eé]cole\s+[Ss]up[eé]rieure[^\n,|]*|ESITH)\b", masked_text)
+        school = school_match.group(0).strip() if school_match else None
+        if not school:
+            school_kw = re.search(r"(?i)\b(manchester|leeds|casablanca|rabat)\b", masked_text)
+            school = school_kw.group(0).strip().title() if school_kw else "a leading university"
 
-        skills = re.findall(r"(?i)\b(python|airflow|power\s+bi|django|git|docker|sql|go|kafka|node\.js|postgresql|react|kubernetes|aws)\b", masked_text)
+        skills = re.findall(r"(?i)\b(python|airflow|power\s+bi|django|git|docker|sql|go|kafka|node\.js|postgresql|react|kubernetes|aws|redis|typescript|javascript)\b", masked_text)
         unique_skills = []
-        seen = set()
+        seen_skills = set()
         for s in skills:
-            u = s.strip().title()
-            if u.upper() not in seen:
-                seen.add(u.upper())
-                unique_skills.append(u)
-        skills_str = ", ".join(unique_skills[:8]) if unique_skills else "technologies modernes et outils de développement"
+            u = s.strip()
+            # Normalize capitalization for known skills
+            norm_map = {"go": "Go", "sql": "SQL", "aws": "AWS", "git": "Git", "redis": "Redis",
+                        "docker": "Docker", "kubernetes": "Kubernetes", "python": "Python",
+                        "kafka": "Kafka", "react": "React", "typescript": "TypeScript",
+                        "javascript": "JavaScript", "django": "Django", "airflow": "Airflow",
+                        "node.js": "Node.js", "postgresql": "PostgreSQL", "power bi": "Power BI"}
+            normalized = norm_map.get(u.lower(), u.title())
+            if normalized.upper() not in seen_skills:
+                seen_skills.add(normalized.upper())
+                unique_skills.append(normalized)
+        skills_str = ", ".join(unique_skills[:8]) if unique_skills else "modern technologies and development tools"
 
         is_english = bool(re.search(r"(?i)\b(english|leading|built|maintained|mentoring|present)\b", masked_text))
 
         if is_english:
             return (
-                f"Accomplished {title} with extensive experience leading software engineering projects across companies like {comps_str}. "
-                f"Holds a degree from {school}. Key expertise includes {skills_str}, with proven track record in designing scalable systems, "
+                f"Accomplished {title} with extensive experience in software engineering "
+                f"across {comps_str}. "
+                f"Holds a degree from {school}. Key expertise includes {skills_str}, "
+                f"with a proven track record in designing scalable systems, "
                 f"optimizing database architectures, and mentoring engineering teams."
             )
 
         return (
             f"Profil de {title} diplômé(e) de {school}. Forte d'expériences significatives chez {comps_str}, "
-            f"il/elle intervient sur la conception de architectures logicielles, le développement de services d'ingénierie et la gestion de projets. "
+            f"il/elle intervient sur la conception d'architectures logicielles, le développement de services et la gestion de projets. "
             f"Ses compétences clés couvrent {skills_str} ainsi qu'une solide capacité d'analyse."
         )
 

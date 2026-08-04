@@ -209,15 +209,26 @@ def process_cv_pipeline(
 
     first_title = experiences_list[0].poste if experiences_list else None
     
-    secteur = "Informatique & Data"
-    if first_title:
-        title_lower = first_title.lower()
-        if "data" in title_lower or "ingénieure data" in title_lower:
-            secteur = "Informatique & Ingénierie Data"
-        elif "développeur" in title_lower or "logiciel" in title_lower or "backend" in title_lower or "engineer" in title_lower:
-            secteur = "Développement Logiciel & IT"
-        elif "chef de projet" in title_lower or "manager" in title_lower:
-            secteur = "Management de Projets IT"
+    if language == "en":
+        secteur = "IT & Data"
+        if first_title:
+            title_lower = first_title.lower()
+            if "data" in title_lower:
+                secteur = "IT & Data Engineering"
+            elif any(kw in title_lower for kw in ["developer", "software", "backend", "frontend", "engineer", "devops"]):
+                secteur = "Software Development & IT"
+            elif any(kw in title_lower for kw in ["manager", "director", "lead"]):
+                secteur = "IT Project Management"
+    else:
+        secteur = "Informatique & Data"
+        if first_title:
+            title_lower = first_title.lower()
+            if "data" in title_lower or "ingénieure data" in title_lower:
+                secteur = "Informatique & Ingénierie Data"
+            elif any(kw in title_lower for kw in ["développeur", "logiciel", "backend", "engineer"]):
+                secteur = "Développement Logiciel & IT"
+            elif any(kw in title_lower for kw in ["chef de projet", "manager"]):
+                secteur = "Management de Projets IT"
 
     profil_obj = Profil(
         titre_poste_actuel=first_title,

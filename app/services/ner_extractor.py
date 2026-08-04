@@ -81,6 +81,13 @@ def parse_date_to_month_year(date_str: str) -> Tuple[int, int]:
     year_match = re.search(r"\b(20\d{2}|19\d{2})\b", s_clean)
     year = int(year_match.group(1)) if year_match else datetime.now().year
 
+    # Handle numeric MM/YYYY format (e.g. "03/2020", "12/2022")
+    numeric_month_match = re.match(r"^(\d{1,2})/(\d{4})$", date_str.strip())
+    if numeric_month_match:
+        m_val = int(numeric_month_match.group(1))
+        if 1 <= m_val <= 12:
+            return int(numeric_month_match.group(2)), m_val
+
     month = 1
     for m_name, m_num in MONTHS_MAP.items():
         if re.search(r"\b" + re.escape(m_name) + r"\b", s_clean):
@@ -206,7 +213,7 @@ TECH_SKILLS_PATTERNS = re.compile(
     r"|react(?:\.js)?|vue(?:\.js)?|angular|node(?:\.js)?|express|fastapi|flask|django|spring\s+boot"
     r"|postgresql|postgres|mysql|sqlite|mongodb|redis|oracle|sql"
     r"|pandas|airflow|power\s+bi|tableau|excel(?:\s+avanc[eé])?|jira"
-    r"|docker|kubernetes|aws|azure|gcp|git|github|gitlab|gitlab\s+ci|ci/cd"
+    r"|docker|kubernetes|aws|azure|gcp|git|gitlab|gitlab\s+ci|ci/cd"
     r"|adobe\s+xd|figma|photoshop|illustrator|canva"
     r"|spacy|nltk|transformers|scikit-learn|tensorflow|pytorch|opencv"
     r")\b",
