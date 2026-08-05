@@ -99,8 +99,15 @@ def parse_date_to_month_year(date_str: str) -> Tuple[int, int]:
 
 def parse_date_duration_months(date_debut_str: Optional[str], date_fin_str: Optional[str]) -> Optional[int]:
     """
-    Calculate exact duration in months between start and end date strings (Rule 13 & 17).
-    CRITICAL: Only fallback to today() if date_fin explicitly contains 'Present'/'Current'/'En cours'.
+    Calculate duration in months between start and end date strings (Rule 13 & 17).
+
+    CONVENTION: Uses INCLUSIVE month counting — both the start month and end month
+    are counted as full months. Example: "Mars 2020 → Décembre 2022" = 34 months
+    (not 33). This is a deliberate product choice: a role starting and ending in
+    the same month counts as 1 month of experience, not 0.
+
+    CRITICAL: Only fallback to today() if date_fin explicitly contains
+    'Present'/'Current'/'En cours'.
     """
     if not date_debut_str:
         return None
@@ -125,6 +132,7 @@ def parse_date_duration_months(date_debut_str: Optional[str], date_fin_str: Opti
                 return 3
             return 12  # Single year default = 12 months
 
+        # +1 for inclusive counting: both start and end months count fully
         total_months = (y_end - y_start) * 12 + (m_end - m_start) + 1
         return max(1, total_months)
     except Exception:

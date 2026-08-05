@@ -119,9 +119,17 @@ def test_detect_address_valid():
     assert res2["confidence"] == 0.92
 
 def test_detect_address_non_moroccan():
-    text = "Lives in Paris, France"
+    # City not in any known list should return None
+    text = "Lives in Zurich, Switzerland"
     res = detect_address(text)
     assert res["value"] is None
+
+def test_detect_address_international():
+    # International cities should match with lower confidence
+    text = "Based in Manchester, UK"
+    res = detect_address(text)
+    assert res["value"] == "Manchester"
+    assert res["confidence"] == 0.75
 
 # --- Name Detection Tests ---
 def test_detect_name_context():

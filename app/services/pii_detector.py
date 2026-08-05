@@ -9,8 +9,30 @@ MOROCCAN_CITIES = [
     "Guelmim", "Berrechid", "Wazzan", "Errachidia", "Essaouira", "Ifrane"
 ]
 
+# International cities for address detection (lower confidence than Moroccan)
+INTERNATIONAL_CITIES = [
+    # UK
+    "London", "Manchester", "Birmingham", "Leeds", "Liverpool", "Edinburgh",
+    "Glasgow", "Bristol", "Oxford", "Cambridge", "Sheffield", "Nottingham",
+    # France
+    "Paris", "Lyon", "Marseille", "Toulouse", "Nice", "Nantes", "Strasbourg",
+    "Montpellier", "Bordeaux", "Lille",
+    # US
+    "New York", "San Francisco", "Los Angeles", "Chicago", "Boston", "Seattle",
+    "Austin", "Denver", "Atlanta", "Houston",
+    # Canada
+    "Toronto", "Montreal", "Vancouver", "Ottawa",
+    # Germany
+    "Berlin", "Munich", "Hamburg", "Frankfurt",
+]
+
 # Compiled Regex Patterns
-PHONE_REGEX = re.compile(r'(?:\+212|0)[\s.\-]*[567](?:[\s.\-]?\d){8}\b')
+# Moroccan phone: +212 or 0 followed by 5/6/7 + 8 digits
+PHONE_REGEX_MA = re.compile(r'(?:\+212|0)[\s.\-]*[567](?:[\s.\-]?\d){8}\b')
+# UK phone: +44 XXXX XXXXXX or 07XXX XXXXXX
+PHONE_REGEX_UK = re.compile(r'(?:\+44[\s.\-]*\d(?:[\s.\-]?\d){9,10}|07\d(?:[\s.\-]?\d){8,9})\b')
+# Generic international: +XX(X) followed by 7-12 digits (covers US +1, EU, etc.)
+PHONE_REGEX_INTL = re.compile(r'\+\d{1,3}[\s.\-]*\(?\d{1,4}\)?(?:[\s.\-]?\d){6,10}\b')
 EMAIL_REGEX = re.compile(r'\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b')
 CIN_REGEX = re.compile(r'\b[A-Z]{1,2}\d{5,6}\b')
 DOB_REGEX = re.compile(
@@ -26,11 +48,25 @@ NAME_CONTEXT_REGEX = re.compile(
 )
 
 def detect_phone(text: str) -> dict:
-    match = PHONE_REGEX.search(text)
+    # Priority 1: Moroccan format (highest confidence)
+    match = PHONE_REGEX_MA.search(text)
     if match:
         val = match.group(0).strip()
         confidence = 0.98 if val.startswith("+212") else 0.95
         return {"value": val, "masked": False, "confidence": confidence}
+
+    # Priority 2: UK format
+    match = PHONE_REGEX_UK.search(text)
+    if match:
+        val = match.group(0).strip()
+        return {"value": val, "masked": False, "confidence": 0.90}
+
+    # Priority 3: Generic international (+XX...)
+    match = PHONE_REGEX_INTL.search(text)
+    if match:
+        val = match.group(0).strip()
+        return {"value": val, "masked": False, "confidence": 0.85}
+
     return {"value": None, "masked": False, "confidence": 0.0}
 
 def detect_email(text: str) -> dict:
@@ -61,9 +97,10 @@ def detect_linkedin_github(text: str) -> dict:
     return {"value": None, "masked": False, "confidence": 0.0}
 
 def detect_address(text: str) -> dict:
-    cities_pattern = r'(?i)\b(?:' + '|'.join(re.escape(c) for c in MOROCCAN_CITIES) + r')\b'
-    city_match = re.search(cities_pattern, text)
-    
+    # Priority 1: Moroccan cities (higher confidence)
+    ma_pattern = r'(?i)\b(?:' + '|'.join(re.escape(c) for c in MOROCCAN_CITIES) + r')\b'
+    city_match = re.search(ma_pattern, text)
+
     if city_match:
         city_name = city_match.group(0)
         postal_match = re.search(r'\b\d{5}\b', text)
@@ -74,6 +111,26 @@ def detect_address(text: str) -> dict:
         else:
             confidence = 0.87
         return {"value": address_str, "masked": False, "confidence": confidence}
+
+    # Priority 2: International cities (lower confidence)
+    intl_pattern = r'(?i)\b(?:' + '|'.join(re.escape(c) for c in INTERNATIONAL_CITIES) + r')\b'
+    intl_match = re.search(intl_pattern, text)
+
+    if intl_match:
+        city_name = intl_match.group(0)
+        # Look for UK/US/EU postal codes near the city
+        postal_match = re.search(
+            r'\b(?:[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}|\d{5}(?:-\d{4})?)\b',
+            text, re.IGNORECASE
+        )
+        address_str = city_name
+        if postal_match:
+            address_str = f"{city_name}, {postal_match.group(0)}"
+            confidence = 0.82
+        else:
+            confidence = 0.75
+        return {"value": address_str, "masked": False, "confidence": confidence}
+
     return {"value": None, "masked": False, "confidence": 0.0}
 
 def detect_name(text: str) -> dict:
