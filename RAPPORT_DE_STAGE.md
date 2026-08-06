@@ -148,7 +148,7 @@ L'environnement de développement et d'expérimentation comprend :
 
 ### Persistence & Qualité :
 - **SQLAlchemy & PostgreSQL** : Persistence des profils candidats et requêtes SQL `WHERE` de recherche.
-- **Pytest (43 cas de tests)** : Suite de tests automatisés validée avec 100% de taux de réussite.
+- **Pytest (44 cas de tests)** : Suite de tests automatisés validée avec 100% de taux de réussite.
 
 ---
 
@@ -204,7 +204,7 @@ Parser", une solution d'analyse automatique de CVs développée en modalité à 
 et reposant sur une architecture hybride à 3 couches (Masquage Regex PII, spaCy NER 
 fr_core_news_lg, Enrichissement LLM). La solution comprend un Dashboard React SaaS 
 moderne, des endpoints d'analyse unitaire, batch (ZIP) et de recherche SQL (SF-10), 
-une suite de 43 tests Pytest (100% de réussite) ainsi qu'un dossier de conformité 
+une suite de 44 tests Pytest (100% de réussite) ainsi qu'un dossier de conformité 
 stricte avec la Loi marocaine n° 09-08 (CNDP).
 
 MOTS-CLÉS :
