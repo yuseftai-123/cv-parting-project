@@ -31,3 +31,15 @@ cv-parting-project-submission.zip
 
 # Internal Specifications PDF
 Cdc_CV_Parser_130726.pdf
+
+# Personal / Administrative Internship Documents (Confidential)
+attestation de stage.*
+document de stage/
+fiche d'appreciation.*
+certificat de stage.*
+
+# Scratch inspection & dump files
+layout_dump*.txt
+analyze_layout*.py
+inspect_*.py
+pptx template/
