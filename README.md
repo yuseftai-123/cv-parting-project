@@ -25,6 +25,18 @@
 
 ---
 
+## 📸 Application Previews
+
+| React SaaS Dashboard | FastAPI Swagger Interactive API |
+| :---: | :---: |
+| ![React Dashboard](screenshots/1_react_saas_dashboard.png) | ![FastAPI Endpoints](screenshots/2_fastapi_swagger_endpoints.png) |
+
+| Deterministic PII Anonymization & Security Gate Verification |
+| :---: |
+| ![PII Anonymization Terminal Output](screenshots/3_pii_anonymization_terminal.png) |
+
+---
+
 ## 🏗️ System Architecture (8-Stage, 3-Layer Pipeline)
 
 ```
